@@ -103,6 +103,15 @@ def test_plant_gate():
     assert step.v_left == 0.0 and step.v_right == 0.0
 
 
+def test_eye_to_rate():
+    import food
+
+    assert food.eye_to_rate(0.0) == 0.0
+    assert food.eye_to_rate(0.375) == 75.0
+    assert food.eye_to_rate(food.EYE_FULL) == config.NOMINAL_MAX
+    assert food.eye_to_rate(1.0) == config.NOMINAL_MAX
+
+
 def test_pulse_conversion():
     import pulse
 

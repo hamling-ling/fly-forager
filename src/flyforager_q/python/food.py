@@ -18,6 +18,20 @@ def fill_to_rate(fill: float) -> float:
     return min(NOMINAL_MAX, NOMINAL_MAX * fill / FILL_FULL)
 
 
+# The feeding circuit reads the same eyes as the drive model: the
+# mean eye-range coverage, with EYE_FULL (the safety-stop fill)
+# mapping to NOMINAL_MAX. A sheet in front (~0.10 per eye in fly-car's
+# calibration) gives ~20 Hz; half-covered eyes give ~100 Hz.
+EYE_FULL = 0.75
+
+
+def eye_to_rate(mean_eye: float) -> float:
+    """Nominal rate for the mean eye-range coverage. Pure/testable."""
+    if mean_eye <= 0.0:
+        return 0.0
+    return min(NOMINAL_MAX, NOMINAL_MAX * mean_eye / EYE_FULL)
+
+
 def _food_mask(frame, roi_fraction: float = ROI_FRACTION):
     """Binary mask of the food colour in the frame's centre ROI."""
     import cv2

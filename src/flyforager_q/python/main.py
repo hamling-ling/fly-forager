@@ -39,8 +39,8 @@ from config import (
     params_at,
     read_state,
 )
-from food import fill_to_rate, food_fill_lr, red_eyes
-from plant import Plant
+from food import eye_to_rate, food_fill_lr, red_eyes
+from plant import RED_FILL, Plant
 from pulse import wheel_pulses
 
 # Satiety level for the LED gauge in the fixed states: the anchors
@@ -89,8 +89,8 @@ def loop() -> None:
                     continue
                 fill, _fl, _fr = food_fill_lr(frame)
                 red_l, red_r, place = red_eyes(frame)
-                nominal = fill_to_rate(fill)
-                seen = f"fill {fill:.3f}  "
+                nominal = eye_to_rate(0.5 * (red_l + red_r))
+                seen = f"fill {fill:.3f}  eye {red_l:.2f}/{red_r:.2f}  "
             else:
                 nominal = float(MANUAL_RATE)
                 seen = ""
@@ -98,7 +98,11 @@ def loop() -> None:
                 nominal, k_p, g_gaba, TRIALS, seed=KERNEL_SEED
             )
             eat = mean >= EAT_THRESHOLD_HZ
-            if eat and state == "auto":
+            # Feeding counts only at the food (both eyes at the
+            # safety-stop fill); a distant EAT opens the gate but
+            # does not fill the robot before it arrives.
+            at_food = min(red_l, red_r) >= RED_FILL
+            if eat and state == "auto" and at_food:
                 satiety.eat()
             level = (
                 satiety.level if state == "auto" else STATE_LEVELS[state]
