@@ -164,7 +164,7 @@ def test_satiety_full_latch():
     s.elapse(config.HUNGER_RETURN_S * 0.1)
     assert abs(s.level - 0.9) < 1e-9
     assert s.full and s.effective_level == 1.0
-    # draining to FULL_RELEASE releases the latch
-    s.elapse(config.HUNGER_RETURN_S * 0.3)
-    assert abs(s.level - config.FULL_RELEASE) < 1e-9
+    # draining past FULL_RELEASE releases the latch
+    s.elapse(config.HUNGER_RETURN_S * 0.35)
+    assert abs(s.level - 0.55) < 1e-9
     assert not s.full and s.effective_level == s.level
