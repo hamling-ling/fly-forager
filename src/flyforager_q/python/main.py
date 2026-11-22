@@ -94,7 +94,10 @@ def loop() -> None:
                 # nominal = NOMINAL_MAX x mean PN output.
                 u_l, u_r = pn_outputs(red_l, red_r, place)
                 nominal = NOMINAL_MAX * 0.5 * (u_l + u_r)
-                seen = f"fill {fill:.3f}  eye {red_l:.2f}/{red_r:.2f}  "
+                seen = (
+                    f"fill {fill:.3f}  eye {red_l:.2f}/{red_r:.2f}  "
+                    f"place {place:+.2f}  "
+                )
             else:
                 nominal = float(MANUAL_RATE)
                 seen = ""
