@@ -57,6 +57,15 @@ for bin in gaba.bin indptr.bin post.bin sugar.bin w_base.bin; do
     exit 1
   fi
 done
+# loom_cells.npz is fly-car's LC4/LPLC2 table, copied from
+# fly-car's src/flycar/ (binary, so it is not in git via the
+# connector). color_thresholds.json is text and travels with git.
+for extra in loom_cells.npz color_thresholds.json; do
+  if [[ ! -f "$root/src/flyforager_q/python/$extra" ]]; then
+    echo "missing: src/flyforager_q/python/$extra (copy loom_cells.npz from fly-car's src/flycar/)" >&2
+    exit 1
+  fi
+done
 
 sketch_hash=$(
   tar -C "$root/src/flyforager_q" \

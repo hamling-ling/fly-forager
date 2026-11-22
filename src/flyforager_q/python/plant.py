@@ -199,14 +199,19 @@ class Plant:
         self,
         red_l: float,
         red_r: float,
+        blue_l: float = 0.0,
+        blue_r: float = 0.0,
+        n: int | None = None,
         loom: tuple[float, float] = (0.0, 0.0),
         place: float = 0.0,
-        n: int | None = None,
     ) -> Step:
         """Hold one frame and advance the membranes by ``n`` steps.
 
         ``n`` omitted follows the wall clock since the previous call,
-        capped at ``CATCH_UP_S`` like fly-car's app loop.
+        capped at ``CATCH_UP_S`` like fly-car's app loop. Signature
+        mirrors flycar.behavior: ``blue_l`` / ``blue_r`` are carried
+        for the log and the lamps and do not drive DNp01 -- the loom
+        current does.
         """
         began = time.monotonic()
         if n is None:

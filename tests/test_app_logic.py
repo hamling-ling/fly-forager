@@ -131,6 +131,53 @@ def test_arrived():
     assert not food.arrived(0.33)
 
 
+def _import_with_cv2_stub(name):
+    import sys
+    import types
+
+    if "cv2" not in sys.modules:
+        stub = types.ModuleType("cv2")
+        stub.COLOR_BGR2HSV = 40
+        sys.modules["cv2"] = stub
+    return __import__(name)
+
+
+def test_loom_math():
+    loom = _import_with_cv2_stub("loom")
+
+    assert abs(loom.expansion(0.0) - 0.1192) < 1e-3
+    assert loom.expansion(1.0) > 0.99
+    assert loom.size_term(0.5, 0.05) == 0.0  # below the floor
+    assert loom.size_term(0.5, 0.20) == 1.0
+    assert loom.widen(0.0) == 0.0
+    assert abs(loom.widen(0.5) - 0.65) < 1e-12
+    assert loom.widen(1.0) == 1.0
+
+
+def test_loom_track_currents():
+    loom = _import_with_cv2_stub("loom")
+
+    track = loom.LoomTrack()
+    small = loom.Disk(cu=0.5, cv=0.5, ru=0.10, rv=0.10, theta=0.20)
+    big = loom.Disk(cu=0.5, cv=0.5, ru=0.20, rv=0.20, theta=0.40)
+    c1 = track.update(small, 0.0)
+    assert c1[0] >= 0.0 and c1[1] >= 0.0
+    c2 = track.update(big, 0.5)  # theta_dot = 0.4 rad/s
+    assert c2[0] > c1[0] and c2[1] > c1[1]
+    assert c2[0] > 0.0 and c2[1] > 0.0
+    assert track.update(None, 1.0) == (0.0, 0.0)
+
+
+def test_plant_loom_escape_not_gated():
+    import plant as plant_mod
+
+    p = plant_mod.Plant()
+    p.sigma = 0.0  # satiated: approach is gated off, escape is not
+    step = p.steps(0.0, 0.0, 0.0, 0.0, loom=(2.0, 2.0), n=1500)
+    assert step.v_left < 0.0 and step.v_right < 0.0
+    assert step.mode == "back"
+
+
 def test_pulse_conversion():
     import pulse
 

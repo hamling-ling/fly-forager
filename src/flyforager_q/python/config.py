@@ -29,6 +29,10 @@ TRIALS = 3
 
 # Pause between decisions, seconds.
 DECISION_S = 2.0
+# Occupancy + loom resampling cadence, same as flycar_q's COUNT_S:
+# the blue measurement needs frame history at this rate even though
+# decisions (and wheel commands) run on DECISION_S.
+COUNT_S = 0.10
 
 # Fixed seed base for the kernel, so the same food in the same state
 # gives the same decision every time (demo reproducibility).

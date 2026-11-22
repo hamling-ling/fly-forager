@@ -22,6 +22,7 @@ fixed rate is judged instead -- the bench mode for trying states.
 from __future__ import annotations
 
 import sys
+import threading
 import time
 
 from arduino.app_utils import App
@@ -30,6 +31,7 @@ import drive
 import kernel
 import proboscis
 from config import (
+    COUNT_S,
     DECISION_S,
     EAT_THRESHOLD_HZ,
     KERNEL_SEED,
@@ -42,6 +44,7 @@ from config import (
     read_state,
 )
 from food import arrived, at_mouth, food_fill_lr, red_eyes
+from occupancy import Counts
 from plant import Plant, pn_outputs
 from pulse import wheel_pulses
 
@@ -72,6 +75,22 @@ def loop() -> None:
         print(f"bench mode: nominal rate fixed at {MANUAL_RATE:g} Hz")
     satiety = Satiety()
     plant = Plant()
+    # fly-car's occupancy + loom, updated at COUNT_S like flycar_q.
+    # flycar_q updates in its main loop; here a thread does it,
+    # because the decision loop is busy for seconds at a time. The
+    # decision loop only reads the latest values.
+    counts = Counts()
+    counts_stop = threading.Event()
+    if eye is not None:
+        def _count_loop() -> None:
+            while not counts_stop.wait(COUNT_S):
+                frame = eye.latest()
+                if frame is not None:
+                    counts.update(frame, now=time.monotonic())
+
+        threading.Thread(
+            target=_count_loop, name="counts", daemon=True
+        ).start()
     last_cycle = time.monotonic()
     try:
         while True:
@@ -89,6 +108,8 @@ def loop() -> None:
             last_cycle = began
             fill = 0.0
             red_l = red_r = place = 0.0
+            blue_l = blue_r = 0.0
+            loom = (0.0, 0.0)
             if eye is not None:
                 frame, _seen = eye.shot()
                 if frame is None:
@@ -97,6 +118,8 @@ def loop() -> None:
                     continue
                 fill, _fl, _fr = food_fill_lr(frame)
                 red_l, red_r, place = red_eyes(frame)
+                blue_l, blue_r = counts.values[2], counts.values[3]
+                loom = counts.loom
                 # The kernel reads the PN stage of the same eyes:
                 # nominal = NOMINAL_MAX x mean PN output.
                 u_l, u_r = pn_outputs(red_l, red_r, place)
@@ -104,6 +127,9 @@ def loop() -> None:
                 seen = (
                     f"fill {fill:.3f}  eye {red_l:.2f}/{red_r:.2f}  "
                     f"place {place:+.2f}  "
+                    f"blue {blue_l:.2f}/{blue_r:.2f}  "
+                    f"loom {loom[0]:.2f}/{loom[1]:.2f}  "
+                    f"td {counts.theta_dot:.2f}  "
                 )
             else:
                 nominal = float(MANUAL_RATE)
@@ -127,10 +153,12 @@ def loop() -> None:
                 # follows the latest decision, the membranes advance
                 # by the wall time since the previous cycle.
                 plant.sigma = 1.0 if eat else 0.0
-                step = plant.steps(red_l, red_r, place=place)
+                step = plant.steps(
+                    red_l, red_r, blue_l, blue_r, loom=loom, place=place
+                )
                 right, left = wheel_pulses(step.v_left, step.v_right)
                 mode = step.mode
-                if arrived(fill):
+                if arrived(fill) and mode != "back":
                     # At the food: stop approaching, eat in place.
                     right, left, mode = 0, 0, "arrive"
                 drive.send(right, left)
@@ -150,6 +178,7 @@ def loop() -> None:
             if rest > 0:
                 time.sleep(rest)
     finally:
+        counts_stop.set()
         drive.send(0, 0)
         proboscis.show(0.0, False)
         if eye is not None:
