@@ -18,13 +18,13 @@ def fill_to_rate(fill: float) -> float:
     return min(NOMINAL_MAX, NOMINAL_MAX * fill / FILL_FULL)
 
 
-def _food_mask(frame):
+def _food_mask(frame, roi_fraction: float = ROI_FRACTION):
     """Binary mask of the food colour in the frame's centre ROI."""
     import cv2
     import numpy as np
 
     height, width = frame.shape[:2]
-    rh, rw = int(height * ROI_FRACTION), int(width * ROI_FRACTION)
+    rh, rw = int(height * roi_fraction), int(width * roi_fraction)
     y0, x0 = (height - rh) // 2, (width - rw) // 2
     roi = frame[y0:y0 + rh, x0:x0 + rw]
     hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
@@ -47,12 +47,15 @@ def food_fill(frame) -> float:
     return float(np.count_nonzero(mask)) / float(mask.size)
 
 
-def food_fill_lr(frame) -> tuple[float, float, float]:
+def food_fill_lr(
+    frame, roi_fraction: float = ROI_FRACTION
+) -> tuple[float, float, float]:
     """(total, left, right) coverage: total over the ROI, and the
-    coverage within each half of it, for steering toward the food."""
+    coverage within each half of it, for steering toward the food.
+    roi_fraction=1.0 looks at the whole frame (the periphery)."""
     import numpy as np
 
-    mask = _food_mask(frame)
+    mask = _food_mask(frame, roi_fraction)
     half = mask.shape[1] // 2
     left = mask[:, :half]
     right = mask[:, half:]

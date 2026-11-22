@@ -32,7 +32,10 @@ from config import (
     DECISION_S,
     EAT_THRESHOLD_HZ,
     KERNEL_SEED,
+    FOOD_VISIBLE,
     MANUAL_RATE,
+    NEAR_FILL,
+    PERIPHERY_MIN,
     SEARCH_BURST_S,
     STATES,
     TRIALS,
@@ -101,7 +104,16 @@ def loop() -> None:
             proboscis.show(mean, eat, level)
             move = ""
             if eye is not None:
-                mode, right, left = decide_motion(fill, fill_l, fill_r, eat)
+                b_fill, b_l, b_r = fill, fill_l, fill_r
+                if fill < FOOD_VISIBLE:
+                    # Not in the centre ROI. If it is anywhere in the
+                    # full frame, approach it (periphery sight can
+                    # steer, but never counts as "at the food").
+                    w_fill, w_l, w_r = food_fill_lr(frame, 1.0)
+                    if w_fill >= PERIPHERY_MIN:
+                        b_fill = min(w_fill, NEAR_FILL - 0.01)
+                        b_l, b_r = w_l, w_r
+                mode, right, left = decide_motion(b_fill, b_l, b_r, eat)
                 drive.send(right, left)
                 move = f"  move {mode} R{right} L{left}"
                 if mode == "search":
