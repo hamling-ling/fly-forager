@@ -57,13 +57,51 @@ WARMUP_FRAMES = 20
 
 # The live state is read from this file next to app.yaml on every
 # decision, so a demo can flip it with:  echo hungry > state.txt
+# The file may also say "auto": the robot then feeds itself full (see
+# the satiety dynamics below) and gets hungry again over time.
 STATE_FILE = Path(__file__).resolve().parents[1] / "state.txt"
+
+# Satiety dynamics for "auto" mode. These are presentation-layer
+# design numbers, NOT measured fly physiology: the measured parts are
+# the endpoint parameter sets and the dose-response curves. The level
+# runs 0 (hungry) to 1 (satiated); each EAT adds 1/EATS_TO_FULL, and
+# the level drains back to 0 over HUNGER_RETURN_S seconds.
+EATS_TO_FULL = 5
+HUNGER_RETURN_S = 600.0
 
 
 def read_state(path: Path = STATE_FILE) -> str:
-    """State name from the state file, or DEFAULT_STATE."""
+    """State name (or "auto") from the state file, or DEFAULT_STATE."""
     try:
         name = path.read_text().strip().lower()
     except OSError:
         return DEFAULT_STATE
+    if name == "auto":
+        return name
     return name if name in STATES else DEFAULT_STATE
+
+
+def params_at(level: float) -> tuple[float, float]:
+    """(k_p, g_gaba) at a satiety level, interpolated through the
+    measured sets: level 0 = hungry (H3), 0.5 = base, 1 = satiated
+    (S3). Only those three points are measured; between them is a
+    straight line, a display device like the binary states were."""
+    level = min(1.0, max(0.0, level))
+    if level <= 0.5:
+        a, b, t = STATES["hungry"], STATES["base"], level * 2.0
+    else:
+        a, b, t = STATES["base"], STATES["satiated"], (level - 0.5) * 2.0
+    return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+
+
+class Satiety:
+    """Feeding fills it, time drains it. Level 0..1."""
+
+    def __init__(self) -> None:
+        self.level = 0.0
+
+    def eat(self) -> None:
+        self.level = min(1.0, self.level + 1.0 / EATS_TO_FULL)
+
+    def elapse(self, seconds: float) -> None:
+        self.level = max(0.0, self.level - seconds / HUNGER_RETURN_S)

@@ -55,5 +55,35 @@ def test_read_state(tmp_path):
     assert config.read_state(path) == "hungry"
     path.write_text("SATIATED")
     assert config.read_state(path) == "satiated"
+    path.write_text("auto")
+    assert config.read_state(path) == "auto"
     path.write_text("bogus")
     assert config.read_state(path) == config.DEFAULT_STATE
+
+
+def test_params_at_measured_points():
+    assert config.params_at(0.0) == config.STATES["hungry"]
+    assert config.params_at(0.5) == config.STATES["base"]
+    assert config.params_at(1.0) == config.STATES["satiated"]
+    # clamped outside 0..1
+    assert config.params_at(-1.0) == config.STATES["hungry"]
+    assert config.params_at(2.0) == config.STATES["satiated"]
+    # k_p falls and g_gaba rises monotonically toward satiety
+    ks = [config.params_at(x / 10)[0] for x in range(11)]
+    gs = [config.params_at(x / 10)[1] for x in range(11)]
+    assert all(a >= b for a, b in zip(ks, ks[1:]))
+    assert all(a <= b for a, b in zip(gs, gs[1:]))
+
+
+def test_satiety_dynamics():
+    s = config.Satiety()
+    assert s.level == 0.0
+    for _ in range(config.EATS_TO_FULL):
+        s.eat()
+    assert s.level == 1.0
+    s.eat()
+    assert s.level == 1.0  # capped
+    s.elapse(config.HUNGER_RETURN_S / 2)
+    assert abs(s.level - 0.5) < 1e-9
+    s.elapse(config.HUNGER_RETURN_S)
+    assert s.level == 0.0  # floored

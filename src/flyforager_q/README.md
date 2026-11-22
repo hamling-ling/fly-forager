@@ -27,6 +27,12 @@ UNO Q の LED マトリクスに口吻として表示する App Lab アプリ。
 `state.txt` に `hungry` / `base` / `satiated` のいずれかを書く。
 判断ごとに読み直すので、再起動は要らない。
 
+`state.txt` に `auto` と書くと自動モードになる。満腹度（0〜1）が
+判断に積算され、食べるたびに満腹側へ 1/5 ずつ進み、餌から離れて
+いると10分かけて空腹側へ戻る。パラメータは hungry（0）→ base（0.5）
+→ satiated（1）の実測3点を直線でつないだものを使う。
+蓄積と回復の速さ自体は演出層の設計値で、実測は3点と用量反応曲線。
+
 ## ベンチモード
 
 カメラなしで判断だけ試す場合は config.py の `MANUAL_RATE` に
@@ -45,6 +51,17 @@ fly-car の deploy と同じ流儀（停止 → コピー → スケッチのハ
 キャッシュ判定 → 起動）。カーネルのバイナリはコピーに含めず、
 deploy の最中にボードのホスト側で g++ でビルドする
 （App Lab のコンテナには g++ が無いので、アプリ自身はビルドできない）。
+
+## ログの取り方
+
+```
+scripts/logs_flyforager_q.sh
+```
+
+実機アプリのログを流しながら `logs/flyforager_q-YYYYMMDD-HHMMSS.log`
+に保存する。Ctrl-C で止めるとファイルが残る。期待する流れは
+`kernel: built` → カメラの warmup → 2 秒ごとの判断行
+（`state base fill ... MN9 ... refuse/EAT`）。
 
 ## カーネルのデータ
 
