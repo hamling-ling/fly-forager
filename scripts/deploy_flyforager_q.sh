@@ -41,7 +41,14 @@ for arg in "$@"; do
   esac
 done
 remote=ArduinoApps/flyforager_q
-ssh=(ssh -o BatchMode=yes -o ConnectTimeout=10)
+# ControlMaster: this script opens several ssh connections, and each
+# one used to pay the board's full login cost (which has been seen at
+# ~30 s when the board is unwell). The first connection logs in, the
+# rest reuse its socket; the master lingers 2 min for the next deploy.
+ssh=(ssh -o BatchMode=yes -o ConnectTimeout=10
+     -o ControlMaster=auto
+     -o ControlPath="$HOME/.ssh/cm-%r@%h:%p"
+     -o ControlPersist=120)
 
 kernel_dir="$root/src/flyforager_q/python/kernel"
 for bin in gaba.bin indptr.bin post.bin sugar.bin w_base.bin; do
@@ -77,9 +84,7 @@ tar -C "$root/src/flyforager_q" \
   --exclude='.cache' \
   --exclude='python/kernel/sim' \
   -cf - . \
-  | "${ssh[@]}" "$host" "mkdir -p ~/${remote} && tar -C ~/${remote} -xf -"
-
-"${ssh[@]}" "$host" "find ~/${remote} -type d -name __pycache__ -prune -exec rm -rf {} +"
+  | "${ssh[@]}" "$host" "mkdir -p ~/${remote} && tar -C ~/${remote} -xf - && find ~/${remote} -type d -name __pycache__ -prune -exec rm -rf {} +"
 
 echo "build kernel on the host ${host}:~/${remote}/python/kernel"
 "${ssh[@]}" "$host" "cd ~/${remote}/python/kernel && g++ -O2 -static -o sim sim.cpp && ls -la sim"
