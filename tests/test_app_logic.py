@@ -192,9 +192,9 @@ def test_satiety_dynamics():
     s = config.Satiety()
     assert s.level == 0.0
     for _ in range(config.EATS_TO_FULL):
-        s.eat()
+        s.feed(config.EAT_STEP_S)
     assert s.level == 1.0
-    s.eat()
+    s.feed(config.EAT_STEP_S)
     assert s.level == 1.0  # capped
     s.elapse(config.HUNGER_RETURN_S / 2)
     assert abs(s.level - 0.5) < 1e-9
@@ -205,7 +205,7 @@ def test_satiety_dynamics():
 def test_satiety_full_latch():
     s = config.Satiety()
     for _ in range(config.EATS_TO_FULL):
-        s.eat()
+        s.feed(config.EAT_STEP_S)
     assert s.full and s.effective_level == 1.0
     # a little drainage does not end the full state
     s.elapse(config.HUNGER_RETURN_S * 0.1)

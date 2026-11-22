@@ -19,19 +19,19 @@ STATES = {
 }
 DEFAULT_STATE = "base"
 
-# Eat when the mean MN9 rate over the decision trials reaches this.
+# The gate opens when the current MN9 estimate reaches this.
 # The 10 Hz proboscis threshold is Experiment D's pre-registered readout.
 EAT_THRESHOLD_HZ = 10.0
 
-# Kernel trials per decision. One trial is 1 s of brain time and takes
-# about 0.2 s of wall time on the Uno Q, so 3 trials cost ~0.6 s.
-TRIALS = 3
-
-# Pause between decisions, seconds.
-DECISION_S = 2.0
+# There is no decision cycle: the kernel thread runs 1 s trials back
+# to back (one trial is ~0.2 s of wall time on the Uno Q) and the
+# main loop reads the newest MN9 estimate. The loop's slice -- how
+# often the plant advances and the wheels are re-commanded -- is
+# LOOP_S; the LED and the log read the state out every LOG_S.
+LOOP_S = 0.10
+LOG_S = 1.0
 # Occupancy + loom resampling cadence, same as flycar_q's COUNT_S:
-# the blue measurement needs frame history at this rate even though
-# decisions (and wheel commands) run on DECISION_S.
+# the blue measurement needs frame history at this rate.
 COUNT_S = 0.10
 
 # Fixed seed base for the kernel, so the same food in the same state
@@ -74,9 +74,13 @@ STATE_FILE = Path(__file__).resolve().parents[1] / "state.txt"
 # Satiety dynamics for "auto" mode. These are presentation-layer
 # design numbers, NOT measured fly physiology: the measured parts are
 # the endpoint parameter sets and the dose-response curves. The level
-# runs 0 (hungry) to 1 (satiated); each EAT adds 1/EATS_TO_FULL, and
-# the level drains back to 0 over HUNGER_RETURN_S seconds.
+# runs 0 (hungry) to 1 (satiated). Eating fills it at a rate of one
+# old decision's worth (1/EATS_TO_FULL) per EAT_STEP_S seconds of
+# eating -- EATS_TO_FULL was tuned in the decision era, when one eat
+# was one 2 s decision -- and the level drains back to 0 over
+# HUNGER_RETURN_S seconds.
 EATS_TO_FULL = 6
+EAT_STEP_S = 2.0
 HUNGER_RETURN_S = 30.0
 
 
@@ -119,8 +123,10 @@ class Satiety:
         self.level = 0.0
         self.full = False
 
-    def eat(self) -> None:
-        self.level = min(1.0, self.level + 1.0 / EATS_TO_FULL)
+    def feed(self, seconds: float) -> None:
+        """Eating for `seconds` fills the level by that much time."""
+        gain = seconds / (EATS_TO_FULL * EAT_STEP_S)
+        self.level = min(1.0, self.level + gain)
         if self.level > 1.0 - 1e-9:  # sixths do not sum to 1 exactly
             self.level = 1.0
             self.full = True
@@ -138,7 +144,7 @@ class Satiety:
 
 # Drive: fly-car's model lives in plant.py (equations and constants
 # ported from flycar.behavior) and pulse.py (flycar.pulse). The one
-# addition is the feeding gate sigma on the approach term, set from
-# each decision in main.py. Wheel commands are held by the MCU until
-# the next decision (2 s); the sketch's 3 s watchdog stops the wheels
+# addition is the feeding gate sigma on the approach term, which
+# follows the current MN9 estimate in main.py. Wheel commands are
+# re-sent every LOOP_S; the sketch's 3 s watchdog stops the wheels
 # if Python dies.

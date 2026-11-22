@@ -1,22 +1,28 @@
-"""Foraging robot: see food, run the feeding circuit, show the decision.
+"""Foraging robot: two circuits running in parallel, coupled by signals.
 
-One decision cycle: read the state (state.txt next to app.yaml, or the
-config default), turn the newest camera frame into a nominal input
-rate, run the C++ kernel for TRIALS of 1 s of brain time in that state,
-and eat when the mean MN9 rate reaches the 10 Hz proboscis threshold.
-The decision is shown on the LED matrix through the sketch, and it
-also drives the wheels through fly-car's drive model (plant.py):
-the eat/refuse outcome becomes the gate sigma on the approach
+Like the fly, there is no decision cycle. The visual circuit
+(plant.py, fly-car's model) runs continuously at the main loop's
+cadence: every LOOP_S it takes the newest camera frame and the
+latest loom and advances the membranes by the elapsed wall time.
+The feeding circuit runs continuously too, in its own thread: the
+C++ kernel runs 1 s trials back to back at the current input, and
+the mean of the last two trials is the current MN9 rate estimate.
+The circuits touch only through signals -- the kernel's input rate
+is NOMINAL_MAX x the mean PN output of the same eyes that drive
+DNa02, and the MN9 estimate becomes the gate sigma on the approach
 (DNa02) term of fly-car's crossed readout, so the robot approaches
-red only while the feeding circuit says eat. Bench mode never moves.
+red only while the feeding circuit fires MN9 at the 10 Hz
+proboscis threshold or more.
 
-state.txt may also say "auto": a satiety level then integrates the
-decisions -- eating fills it toward the satiated parameter set, time
-drains it back toward hungry -- and the kernel runs at the
-interpolated parameters.
+state.txt (next to app.yaml) names the state, or "auto": a satiety
+level then integrates -- while MN9 is over threshold with food at
+the mouth the level fills toward the satiated parameter set, and
+it drains back toward hungry over HUNGER_RETURN_S -- and the
+kernel runs at the interpolated parameters.
 
-With MANUAL_RATE set in config.py the camera is never opened and the
-fixed rate is judged instead -- the bench mode for trying states.
+The LED and the log read the continuous state out once a second;
+neither is a decision. Bench mode (MANUAL_RATE in config.py) never
+opens the camera and never moves.
 """
 
 from __future__ import annotations
@@ -32,13 +38,13 @@ import kernel
 import proboscis
 from config import (
     COUNT_S,
-    DECISION_S,
     EAT_THRESHOLD_HZ,
     KERNEL_SEED,
+    LOG_S,
+    LOOP_S,
     MANUAL_RATE,
     NOMINAL_MAX,
     STATES,
-    TRIALS,
     Satiety,
     params_at,
     read_state,
@@ -53,9 +59,45 @@ from pulse import wheel_pulses
 STATE_LEVELS = {"hungry": 0.0, "base": 0.5, "satiated": 1.0}
 
 
+class KernelFeed:
+    """The feeding circuit as a continuously running process.
+
+    A thread runs one 1 s kernel trial after another at the latest
+    published (nominal, k_p, g_gaba). mn9() averages the last two
+    trial counts: the freshest MN9 estimate, about 0.4 s old on the
+    board (one trial is ~0.2 s of wall time there). The seed walks
+    so consecutive trials differ, as trials of a real circuit would.
+    """
+
+    def __init__(self) -> None:
+        self.nominal = 0.0
+        self.k_p, self.g_gaba = STATES["base"]
+        self.counts: list[int] = []
+        self._seed = KERNEL_SEED
+        self.stop = threading.Event()
+
+    def publish(self, nominal: float, k_p: float, g_gaba: float) -> None:
+        self.nominal = nominal
+        self.k_p = k_p
+        self.g_gaba = g_gaba
+
+    def run(self) -> None:
+        while not self.stop.is_set():
+            _mean, counts = kernel.decide(
+                self.nominal, self.k_p, self.g_gaba, 1, seed=self._seed
+            )
+            self._seed += 1
+            self.counts = (self.counts + counts)[-2:]
+
+    def mn9(self) -> float:
+        if not self.counts:
+            return 0.0
+        return sum(self.counts) / len(self.counts)
+
+
 def loop() -> None:
     # Stdout in the container is block-buffered: at one log line per
-    # decision cycle the buffer takes minutes to flush, so the log
+    # second the buffer still takes minutes to flush, so the log
     # seems to stop and then bursts. Line-buffer it.
     sys.stdout.reconfigure(line_buffering=True)
     if not proboscis.wait_until_bridge():
@@ -75,10 +117,11 @@ def loop() -> None:
         print(f"bench mode: nominal rate fixed at {MANUAL_RATE:g} Hz")
     satiety = Satiety()
     plant = Plant()
+    feed = KernelFeed()
+    threading.Thread(target=feed.run, name="kernel", daemon=True).start()
     # fly-car's occupancy + loom, updated at COUNT_S like flycar_q.
-    # flycar_q updates in its main loop; here a thread does it,
-    # because the decision loop is busy for seconds at a time. The
-    # decision loop only reads the latest values.
+    # flycar_q updates in its main loop; here a thread does it and
+    # the main loop only reads the latest values.
     occ = Counts()
     counts_stop = threading.Event()
     if eye is not None:
@@ -91,13 +134,19 @@ def loop() -> None:
         threading.Thread(
             target=_count_loop, name="counts", daemon=True
         ).start()
-    last_cycle = time.monotonic()
+    state = read_state()
+    last_slice = time.monotonic()
+    last_log = 0.0
     try:
         while True:
             began = time.monotonic()
-            state = read_state()
+            dt = began - last_slice
+            last_slice = began
+            # State flips are read at the log cadence; the satiety
+            # parameters follow the level every slice.
+            if began - last_log >= LOG_S:
+                state = read_state()
             if state == "auto":
-                satiety.elapse(began - last_cycle)
                 k_p, g_gaba = params_at(satiety.effective_level)
                 label = f"auto({satiety.effective_level:.2f})"
                 if satiety.full:
@@ -105,17 +154,17 @@ def loop() -> None:
             else:
                 k_p, g_gaba = STATES[state]
                 label = state
-            last_cycle = began
             fill = 0.0
             red_l = red_r = place = 0.0
             blue_l = blue_r = 0.0
             loom = (0.0, 0.0)
-            if eye is not None:
-                frame, _seen = eye.shot()
-                if frame is None:
-                    drive.send(0, 0)
-                    time.sleep(0.2)
-                    continue
+            nominal = float(MANUAL_RATE) if MANUAL_RATE is not None else 0.0
+            frame = eye.latest() if eye is not None else None
+            if eye is not None and frame is None:
+                drive.send(0, 0)
+                time.sleep(LOOP_S)
+                continue
+            if frame is not None:
                 fill, _fl, _fr = food_fill_lr(frame)
                 red_l, red_r, place = red_eyes(frame)
                 blue_l, blue_r = occ.values[2], occ.values[3]
@@ -124,36 +173,25 @@ def loop() -> None:
                 # nominal = NOMINAL_MAX x mean PN output.
                 u_l, u_r = pn_outputs(red_l, red_r, place)
                 nominal = NOMINAL_MAX * 0.5 * (u_l + u_r)
-                seen = (
-                    f"fill {fill:.3f}  eye {red_l:.2f}/{red_r:.2f}  "
-                    f"place {place:+.2f}  "
-                    f"blue {blue_l:.2f}/{blue_r:.2f}  "
-                    f"loom {loom[0]:.2f}/{loom[1]:.2f}  "
-                    f"td {occ.theta_dot:.2f}  "
-                )
-            else:
-                nominal = float(MANUAL_RATE)
-                seen = ""
-            mean, counts = kernel.decide(
-                nominal, k_p, g_gaba, TRIALS, seed=KERNEL_SEED
-            )
-            eat = mean >= EAT_THRESHOLD_HZ
-            # Feeding counts only with the food at the mouth (centre
+            feed.publish(nominal, k_p, g_gaba)
+            mn9 = feed.mn9()
+            eat = mn9 >= EAT_THRESHOLD_HZ
+            # Feeding fills only with the food at the mouth (centre
             # coverage at FILL_FULL); a distant EAT opens the gate
             # but does not fill the robot before it arrives.
-            if eat and state == "auto" and at_mouth(fill):
-                satiety.eat()
+            if state == "auto":
+                if eat and frame is not None and at_mouth(fill):
+                    satiety.feed(dt)
+                else:
+                    satiety.elapse(dt)
             level = (
                 satiety.effective_level if state == "auto" else STATE_LEVELS[state]
             )
-            proboscis.show(mean, eat, level,
-                           red=(red_l + red_r) / 2.0,
-                           blue=(blue_l + blue_r) / 2.0)
             move = ""
             if eye is not None:
                 # The feeding gate on fly-car's approach term: sigma
-                # follows the latest decision, the membranes advance
-                # by the wall time since the previous cycle.
+                # follows the current MN9 estimate, the membranes
+                # advance by the wall time since the previous slice.
                 plant.sigma = 1.0 if eat else 0.0
                 step = plant.steps(
                     red_l, red_r, blue_l, blue_r, loom=loom, place=place
@@ -169,17 +207,32 @@ def loop() -> None:
                     f"  dna {plant.dna_l.rate:.0f}/{plant.dna_r.rate:.0f}"
                     f"  sigma {plant.sigma:.0f}"
                 )
-            print(
-                f"state {label}  k_p {k_p:.2f}  g_gaba {g_gaba:.2f}  "
-                f"{seen}nominal {nominal:.0f} Hz  "
-                f"MN9 {mean:.1f} Hz {counts}  "
-                f"{'EAT' if eat else 'refuse'}{move}",
-                flush=True,
-            )
-            rest = DECISION_S - (time.monotonic() - began)
+            if began - last_log >= LOG_S:
+                last_log = began
+                seen = ""
+                if eye is not None:
+                    seen = (
+                        f"fill {fill:.3f}  eye {red_l:.2f}/{red_r:.2f}  "
+                        f"place {place:+.2f}  "
+                        f"blue {blue_l:.2f}/{blue_r:.2f}  "
+                        f"loom {loom[0]:.2f}/{loom[1]:.2f}  "
+                        f"td {occ.theta_dot:.2f}  "
+                    )
+                proboscis.show(mn9, eat, level,
+                               red=(red_l + red_r) / 2.0,
+                               blue=(blue_l + blue_r) / 2.0)
+                print(
+                    f"state {label}  k_p {k_p:.2f}  g_gaba {g_gaba:.2f}  "
+                    f"{seen}nominal {nominal:.0f} Hz  "
+                    f"MN9 {mn9:.1f} Hz {feed.counts}  "
+                    f"{'EAT' if eat else 'refuse'}{move}",
+                    flush=True,
+                )
+            rest = LOOP_S - (time.monotonic() - began)
             if rest > 0:
                 time.sleep(rest)
     finally:
+        feed.stop.set()
         counts_stop.set()
         drive.send(0, 0)
         proboscis.show(0.0, False)
