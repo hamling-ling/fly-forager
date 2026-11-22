@@ -84,7 +84,8 @@ def loop() -> None:
                 satiety.eat()
             proboscis.show(mean, eat)
             print(
-                f"state {label}  {seen}nominal {nominal:.0f} Hz  "
+                f"state {label}  k_p {k_p:.2f}  g_gaba {g_gaba:.2f}  "
+                f"{seen}nominal {nominal:.0f} Hz  "
                 f"MN9 {mean:.1f} Hz {counts}  "
                 f"{'EAT' if eat else 'refuse'}"
             )
