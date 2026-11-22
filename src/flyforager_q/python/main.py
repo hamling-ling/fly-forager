@@ -4,10 +4,11 @@ One decision cycle: read the state (state.txt next to app.yaml, or the
 config default), turn the newest camera frame into a nominal input
 rate, run the C++ kernel for TRIALS of 1 s of brain time in that state,
 and eat when the mean MN9 rate reaches the 10 Hz proboscis threshold.
-The decision is shown on the LED matrix through the sketch, and the
-behaviour layer (behavior.py) turns it into wheel pulses: search when
-nothing is seen, approach steering by the frame's left/right coverage,
-stop to eat at the food, arc away on refusal. Bench mode never moves.
+The decision is shown on the LED matrix through the sketch, and it
+also drives the wheels through fly-car's drive model (plant.py):
+the eat/refuse outcome becomes the gate sigma on the approach
+(DNa02) term of fly-car's crossed readout, so the robot approaches
+red only while the feeding circuit says eat. Bench mode never moves.
 
 state.txt may also say "auto": a satiety level then integrates the
 decisions -- eating fills it toward the satiated parameter set, time
@@ -27,23 +28,20 @@ from arduino.app_utils import App
 import drive
 import kernel
 import proboscis
-from behavior import decide_motion
 from config import (
     DECISION_S,
     EAT_THRESHOLD_HZ,
     KERNEL_SEED,
-    FOOD_VISIBLE,
     MANUAL_RATE,
-    NEAR_FILL,
-    PERIPHERY_MIN,
-    SEARCH_BURST_S,
     STATES,
     TRIALS,
     Satiety,
     params_at,
     read_state,
 )
-from food import fill_to_rate, food_fill_lr
+from food import fill_to_rate, food_fill_lr, red_eyes
+from plant import Plant
+from pulse import wheel_pulses
 
 # Satiety level for the LED gauge in the fixed states: the anchors
 # the auto-mode interpolation passes through.
@@ -67,6 +65,7 @@ def loop() -> None:
     else:
         print(f"bench mode: nominal rate fixed at {MANUAL_RATE:g} Hz")
     satiety = Satiety()
+    plant = Plant()
     last_cycle = time.monotonic()
     try:
         while True:
@@ -80,13 +79,16 @@ def loop() -> None:
                 k_p, g_gaba = STATES[state]
                 label = state
             last_cycle = began
-            fill = fill_l = fill_r = 0.0
+            fill = 0.0
+            red_l = red_r = place = 0.0
             if eye is not None:
                 frame, _seen = eye.shot()
                 if frame is None:
+                    drive.send(0, 0)
                     time.sleep(0.2)
                     continue
-                fill, fill_l, fill_r = food_fill_lr(frame)
+                fill, _fl, _fr = food_fill_lr(frame)
+                red_l, red_r, place = red_eyes(frame)
                 nominal = fill_to_rate(fill)
                 seen = f"fill {fill:.3f}  "
             else:
@@ -104,23 +106,18 @@ def loop() -> None:
             proboscis.show(mean, eat, level)
             move = ""
             if eye is not None:
-                b_fill, b_l, b_r = fill, fill_l, fill_r
-                if fill < FOOD_VISIBLE:
-                    # Not in the centre ROI. If it is anywhere in the
-                    # full frame, approach it (periphery sight can
-                    # steer, but never counts as "at the food").
-                    w_fill, w_l, w_r = food_fill_lr(frame, 1.0)
-                    if w_fill >= PERIPHERY_MIN:
-                        b_fill = min(w_fill, NEAR_FILL - 0.01)
-                        b_l, b_r = w_l, w_r
-                mode, right, left = decide_motion(b_fill, b_l, b_r, eat)
+                # The feeding gate on fly-car's approach term: sigma
+                # follows the latest decision, the membranes advance
+                # by the wall time since the previous cycle.
+                plant.sigma = 1.0 if eat else 0.0
+                step = plant.steps(red_l, red_r, place=place)
+                right, left = wheel_pulses(step.v_left, step.v_right)
                 drive.send(right, left)
-                move = f"  move {mode} R{right} L{left}"
-                if mode == "search":
-                    # Burst, then stop and look: holding the turn for
-                    # the whole cycle spins the camera past everything.
-                    time.sleep(SEARCH_BURST_S)
-                    drive.send(0, 0)
+                move = (
+                    f"  move {step.mode} R{right} L{left}"
+                    f"  dna {plant.dna_l.rate:.0f}/{plant.dna_r.rate:.0f}"
+                    f"  sigma {plant.sigma:.0f}"
+                )
             print(
                 f"state {label}  k_p {k_p:.2f}  g_gaba {g_gaba:.2f}  "
                 f"{seen}nominal {nominal:.0f} Hz  "

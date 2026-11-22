@@ -75,32 +75,42 @@ def test_params_at_measured_points():
     assert all(a <= b for a, b in zip(gs, gs[1:]))
 
 
-def test_decide_motion():
-    import behavior
+def test_plant_gate():
+    import plant
 
-    # unseen -> scan turn in place
-    assert behavior.decide_motion(0.01, 0.01, 0.01, False) == (
-        "search",
-        config.SEARCH_PULSE,
-        -config.SEARCH_PULSE,
-    )
-    # at the food: eat stops, refuse arcs away backwards
-    assert behavior.decide_motion(0.22, 0.22, 0.22, True) == ("eat", 0, 0)
-    assert behavior.decide_motion(0.22, 0.22, 0.22, False) == (
-        "reject",
-        config.BACK_RIGHT,
-        config.BACK_LEFT,
-    )
-    # approach: balanced coverage goes straight at cruise
-    mode, right, left = behavior.decide_motion(0.10, 0.10, 0.10, False)
-    assert mode == "approach"
-    assert right == left == config.CRUISE_PULSE
-    # food on the right -> right wheel slower (turn toward it)
-    mode, right, left = behavior.decide_motion(0.10, 0.02, 0.18, False)
-    assert mode == "approach" and right < left
-    # eat away from the food still approaches
-    mode, _, _ = behavior.decide_motion(0.10, 0.10, 0.10, True)
-    assert mode == "approach"
+    # fly-car's paper calibration: 0.10 in both eyes -> current ~1.47
+    i_l, i_r = plant.dna_current(0.10, 0.10)
+    assert abs(i_l - 1.4667) < 0.01 and abs(i_r - 1.4667) < 0.01
+    # the gate zeroes the approach term and nothing else
+    s, o, v_l, v_r = plant.wheel_speeds(100.0, 100.0, 0.0, 0.0, sigma=1.0)
+    assert abs(v_l - 0.03) < 1e-9 and abs(v_r - 0.03) < 1e-9
+    s, o, v_l, v_r = plant.wheel_speeds(100.0, 100.0, 0.0, 0.0, sigma=0.0)
+    assert v_l == 0.0 and v_r == 0.0
+    # escape is not gated: DNp01 still reverses at sigma 0
+    s, o, v_l, v_r = plant.wheel_speeds(0.0, 0.0, 100.0, 100.0, sigma=0.0)
+    assert abs(v_l + 0.03) < 1e-9 and abs(v_r + 0.03) < 1e-9
+    # a held red frame drives forward with the gate open, not closed
+    p = plant.Plant()
+    step = p.steps(0.10, 0.10, n=1500)
+    assert step.v_left > 0.0 and step.v_right > 0.0
+    p2 = plant.Plant()
+    p2.sigma = 0.0
+    step = p2.steps(0.10, 0.10, n=1500)
+    assert step.v_left == 0.0 and step.v_right == 0.0
+    # the safety stop overrides the gate
+    p3 = plant.Plant()
+    step = p3.steps(0.80, 0.80, n=1500)
+    assert step.v_left == 0.0 and step.v_right == 0.0
+
+
+def test_pulse_conversion():
+    import pulse
+
+    assert pulse.wheel_pulses(0.05, 0.05) == (40, 40)
+    assert pulse.motion_pulse(5) == 0  # below the forward start
+    assert pulse.motion_pulse(13) == 13
+    assert pulse.motion_pulse(-1) == -37  # reverse dead-band shift
+    assert pulse.motion_pulse(0) == 0
 
 
 def test_satiety_dynamics():

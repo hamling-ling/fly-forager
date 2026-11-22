@@ -107,20 +107,9 @@ class Satiety:
         self.level = max(0.0, self.level - seconds / HUNGER_RETURN_S)
 
 
-# Drive (presentation layer, like the fill mapping -- tuning numbers,
-# not measurements). Wheel pulses are -255..255 for the sketch's
-# setMotorSpeed; one command is held by the MCU until the next decision
-# (2 s) and the sketch's 3 s watchdog stops the wheels if Python dies.
-# Pulses are kept well above the servos' start threshold; fly-car's
-# straight-line hinge calibration is NOT ported in v1.
-FOOD_VISIBLE = 0.02   # below this coverage the food counts as unseen
-NEAR_FILL = 0.20      # at/above this coverage the robot is at the food
-PERIPHERY_MIN = 0.01  # full-frame coverage that counts as "seen in
-                      # the periphery" and triggers an approach
-CRUISE_PULSE = 45     # approach speed
-STEER_GAIN = 22       # pulse difference at full left/right imbalance
-SEARCH_PULSE = 35     # in-place scan turn while nothing is seen
-SEARCH_BURST_S = 0.3  # search turns in short bursts, then stops and
-                      # looks; a full 2 s hold spins ~300 degrees
-BACK_RIGHT = -40      # reject: arc away backwards for one cycle
-BACK_LEFT = -28
+# Drive: fly-car's model lives in plant.py (equations and constants
+# ported from flycar.behavior) and pulse.py (flycar.pulse). The one
+# addition is the feeding gate sigma on the approach term, set from
+# each decision in main.py. Wheel commands are held by the MCU until
+# the next decision (2 s); the sketch's 3 s watchdog stops the wheels
+# if Python dies.

@@ -64,3 +64,36 @@ def food_fill_lr(
         float(np.count_nonzero(left)) / float(left.size),
         float(np.count_nonzero(right)) / float(right.size),
     )
+
+
+# fly-car's eye ranges over the full frame: the left eye reads the
+# image position p in [0, 0.65], the right eye p in [0.35, 1].
+EYE_LEFT_HI = 0.65
+EYE_RIGHT_LO = 0.35
+
+
+def red_eyes(frame) -> tuple[float, float, float]:
+    """(red_l, red_r, place) for fly-car's drive model.
+
+    red_l / red_r are the food colour's coverage of each eye range
+    over the full frame; place is the red centroid, -1 at the left
+    edge and +1 at the right (0 when no red). Same definitions as
+    flycar.occupancy's range_means / red_place, on this app's red
+    thresholds and without its small-region filtering.
+    """
+    import numpy as np
+
+    mask = _food_mask(frame, 1.0)
+    width = mask.shape[1]
+    p = (np.arange(width) + 0.5) / float(width)
+    left = mask[:, p <= EYE_LEFT_HI]
+    right = mask[:, p >= EYE_RIGHT_LO]
+    red_l = float(np.count_nonzero(left)) / float(left.size)
+    red_r = float(np.count_nonzero(right)) / float(right.size)
+    columns = mask.sum(axis=0, dtype=np.float64)
+    total = float(columns.sum())
+    if total <= 0.0:
+        return red_l, red_r, 0.0
+    centroid = float(np.dot(columns, p) / total)
+    place = max(-1.0, min(1.0, (centroid - 0.5) / 0.5))
+    return red_l, red_r, place
