@@ -236,3 +236,6 @@ src/flyforager_q/python/kernel/sim
 
 # カーネルの接続表（.bin）は Release（タグ kernel-v1）で配る
 src/flyforager_q/python/kernel/*.bin
+
+# 実機ログの置き場
+logs/
