@@ -79,14 +79,14 @@ def loop() -> None:
     # flycar_q updates in its main loop; here a thread does it,
     # because the decision loop is busy for seconds at a time. The
     # decision loop only reads the latest values.
-    counts = Counts()
+    occ = Counts()
     counts_stop = threading.Event()
     if eye is not None:
         def _count_loop() -> None:
             while not counts_stop.wait(COUNT_S):
                 frame = eye.latest()
                 if frame is not None:
-                    counts.update(frame, now=time.monotonic())
+                    occ.update(frame, now=time.monotonic())
 
         threading.Thread(
             target=_count_loop, name="counts", daemon=True
@@ -118,8 +118,8 @@ def loop() -> None:
                     continue
                 fill, _fl, _fr = food_fill_lr(frame)
                 red_l, red_r, place = red_eyes(frame)
-                blue_l, blue_r = counts.values[2], counts.values[3]
-                loom = counts.loom
+                blue_l, blue_r = occ.values[2], occ.values[3]
+                loom = occ.loom
                 # The kernel reads the PN stage of the same eyes:
                 # nominal = NOMINAL_MAX x mean PN output.
                 u_l, u_r = pn_outputs(red_l, red_r, place)
@@ -129,7 +129,7 @@ def loop() -> None:
                     f"place {place:+.2f}  "
                     f"blue {blue_l:.2f}/{blue_r:.2f}  "
                     f"loom {loom[0]:.2f}/{loom[1]:.2f}  "
-                    f"td {counts.theta_dot:.2f}  "
+                    f"td {occ.theta_dot:.2f}  "
                 )
             else:
                 nominal = float(MANUAL_RATE)
