@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flyforager"
+version = "0.0.0"
+description = "ハエの脳細胞で飢餓/満腹をシミュレーションし採餌行動を行う差動２輪ロボット"
+requires-python = ">=3.12"
+readme = "README.md"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["flyforager*"]
+
+[tool.setuptools.package-data]
+flyforager = ["subcircuit/*.csv", "subcircuit/*.parquet"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
