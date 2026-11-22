@@ -146,7 +146,9 @@ def loop() -> None:
             level = (
                 satiety.effective_level if state == "auto" else STATE_LEVELS[state]
             )
-            proboscis.show(mean, eat, level)
+            proboscis.show(mean, eat, level,
+                           red=(red_l + red_r) / 2.0,
+                           blue=(blue_l + blue_r) / 2.0)
             move = ""
             if eye is not None:
                 # The feeding gate on fly-car's approach term: sigma
