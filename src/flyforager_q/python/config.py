@@ -67,7 +67,7 @@ STATE_FILE = Path(__file__).resolve().parents[1] / "state.txt"
 # runs 0 (hungry) to 1 (satiated); each EAT adds 1/EATS_TO_FULL, and
 # the level drains back to 0 over HUNGER_RETURN_S seconds.
 EATS_TO_FULL = 5
-HUNGER_RETURN_S = 600.0
+HUNGER_RETURN_S = 30.0
 
 
 def read_state(path: Path = STATE_FILE) -> str:
