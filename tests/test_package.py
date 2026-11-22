@@ -4,9 +4,10 @@ import flyforager
 
 
 def test_subcircuit_files_present():
+    # 接続表の本体（Connectivity_sub.parquet）は Release（タグ subcircuit-v1）で配るため、
+    # リポジトリ内の索引 CSV だけを確認する
     sub = Path(flyforager.__file__).parent / "subcircuit"
     assert (sub / "Completeness_sub.csv").exists()
-    assert (sub / "Connectivity_sub.parquet").exists()
     assert (sub / "neuron_ids.csv").exists()
 
 

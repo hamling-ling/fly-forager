@@ -14,7 +14,7 @@
 
 ## 構成
 
-- `src/flyforager/` — パッケージ。`subcircuit/` に抽出回路の接続表が入る
+- `src/flyforager/` — パッケージ。`subcircuit/` に抽出回路の索引（CSV）が入る。接続表の本体（parquet）は Release で配る
 - `research/` — 設計書と決定シート
 - `poster/` — ポンチ絵
 - `scripts/` — 全脳データの入手手順
@@ -26,7 +26,7 @@
 
 ## データについて
 
-全脳の接続表とモデルは、FlyWire のデータ（CC BY-NC 4.0）と Shiu et al. のモデルコード（MIT）を使う。入手手順は [scripts/README.md](scripts/README.md) に書いた。このリポジトリに入っているのは、自分で抽出した 687 ニューロンの部分回路だけである。
+全脳の接続表とモデルは、FlyWire のデータ（CC BY-NC 4.0）と Shiu et al. のモデルコード（MIT）を使う。入手手順は [scripts/README.md](scripts/README.md) に書いた。自分で抽出した 687 ニューロンの部分回路は、索引の CSV をこのリポジトリに、接続表の本体（Connectivity_sub.parquet）を Release（タグ subcircuit-v1）に置いている。
 
 ## 正直なところ
 
