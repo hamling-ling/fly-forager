@@ -10,6 +10,7 @@ static const unsigned long BLANK_MS = 3000;
 static Arduino_LED_Matrix matrix;
 static unsigned long lastMs = 0;
 static bool live = false;
+static int satietyPct = 0;
 
 static void writeLamp(int pin, int on) {
     digitalWrite(pin, on ? LOW : HIGH);
@@ -21,8 +22,23 @@ static void lampsOff() {
     writeLamp(LED3_B, 0);
 }
 
-static void drawBlank() {
+// Gauge rows (6-7) always; the decision bar only when decision=true.
+static void drawFrame(int mn9, int eat, bool decision) {
     uint8_t frame[PIXELS] = {};
+    int glen = (satietyPct * COLS + 50) / 100;
+    if (glen > COLS) glen = COLS;
+    for (int c = 0; c < glen; ++c) {
+        frame[6 * COLS + c] = 1;
+        frame[7 * COLS + c] = 1;
+    }
+    if (decision && mn9 > 0) {
+        int len = (mn9 * COLS + 50) / 100;  // 100 Hz で全幅
+        if (len > COLS) len = COLS;
+        int rowLo = eat ? 1 : 2;
+        int rowHi = eat ? 4 : 3;
+        for (int r = rowLo; r <= rowHi; ++r)
+            for (int c = 0; c < len; ++c) frame[r * COLS + c] = 1;
+    }
     matrix.draw(frame);
 }
 
@@ -33,25 +49,21 @@ void proboscisSetup() {
     pinMode(LED3_G, OUTPUT);
     pinMode(LED3_B, OUTPUT);
     lampsOff();
-    drawBlank();
+    drawFrame(0, 0, false);
 }
 
-void showProboscis(int mn9, int eat) {
-    uint8_t frame[PIXELS] = {};
+void showProboscis(int mn9, int eat, int satiety) {
+    if (satiety < 0) satiety = 0;
+    if (satiety > 100) satiety = 100;
+    satietyPct = satiety;
+    drawFrame(mn9, eat, true);
     if (mn9 > 0) {
-        int len = (mn9 * COLS + 50) / 100;  // 100 Hz で全幅
-        if (len > COLS) len = COLS;
-        int rowLo = eat ? 2 : 3;
-        int rowHi = eat ? 5 : 4;
-        for (int r = rowLo; r <= rowHi; ++r)
-            for (int c = 0; c < len; ++c) frame[r * COLS + c] = 1;
         writeLamp(LED3_G, eat);
         writeLamp(LED3_R, eat ? 0 : 1);
         writeLamp(LED3_B, 0);
     } else {
         lampsOff();
     }
-    matrix.draw(frame);
     lastMs = millis();
     live = true;
 }
@@ -63,7 +75,8 @@ void proboscisLoop() {
     if (millis() - lastMs < BLANK_MS) {
         return;
     }
-    drawBlank();
+    // Blank the decision bar only; the satiety gauge stays up.
+    drawFrame(0, 0, false);
     lampsOff();
     live = false;
 }

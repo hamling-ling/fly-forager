@@ -36,6 +36,10 @@ from config import (
 )
 from food import fill_to_rate, food_fill
 
+# Satiety level for the LED gauge in the fixed states: the anchors
+# the auto-mode interpolation passes through.
+STATE_LEVELS = {"hungry": 0.0, "base": 0.5, "satiated": 1.0}
+
 
 def loop() -> None:
     if not proboscis.wait_until_bridge():
@@ -82,7 +86,10 @@ def loop() -> None:
             eat = mean >= EAT_THRESHOLD_HZ
             if eat and state == "auto":
                 satiety.eat()
-            proboscis.show(mean, eat)
+            level = (
+                satiety.level if state == "auto" else STATE_LEVELS[state]
+            )
+            proboscis.show(mean, eat, level)
             print(
                 f"state {label}  k_p {k_p:.2f}  g_gaba {g_gaba:.2f}  "
                 f"{seen}nominal {nominal:.0f} Hz  "
