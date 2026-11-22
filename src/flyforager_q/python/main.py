@@ -21,6 +21,7 @@ fixed rate is judged instead -- the bench mode for trying states.
 
 from __future__ import annotations
 
+import sys
 import time
 
 from arduino.app_utils import App
@@ -50,6 +51,10 @@ STATE_LEVELS = {"hungry": 0.0, "base": 0.5, "satiated": 1.0}
 
 
 def loop() -> None:
+    # Stdout in the container is block-buffered: at one log line per
+    # decision cycle the buffer takes minutes to flush, so the log
+    # seems to stop and then bursts. Line-buffer it.
+    sys.stdout.reconfigure(line_buffering=True)
     if not proboscis.wait_until_bridge():
         raise SystemExit("マイコンに届かない")
     if not drive.wait_until_bridge():
