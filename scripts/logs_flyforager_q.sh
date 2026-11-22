@@ -24,6 +24,9 @@ echo "follow ${host}:~/${remote}"
 echo "save ${out}"
 echo "Ctrl-C で切る。ログが残る。"
 
-ssh=(ssh -o BatchMode=yes -o ConnectTimeout=10)
+# ServerAlive: a stalled Wi-Fi link otherwise hangs ssh silently
+# instead of failing, which looks exactly like a stalled log.
+ssh=(ssh -o BatchMode=yes -o ConnectTimeout=10
+     -o ServerAliveInterval=5 -o ServerAliveCountMax=3)
 "${ssh[@]}" "$host" "arduino-app-cli app logs ~/${remote} --follow --tail 30" \
   | tee "$out"

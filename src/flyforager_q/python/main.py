@@ -137,7 +137,8 @@ def loop() -> None:
                 f"state {label}  k_p {k_p:.2f}  g_gaba {g_gaba:.2f}  "
                 f"{seen}nominal {nominal:.0f} Hz  "
                 f"MN9 {mean:.1f} Hz {counts}  "
-                f"{'EAT' if eat else 'refuse'}{move}"
+                f"{'EAT' if eat else 'refuse'}{move}",
+                flush=True,
             )
             rest = DECISION_S - (time.monotonic() - began)
             if rest > 0:
