@@ -4,7 +4,8 @@
 # Adapted from fly-car's deploy_flycar_q.sh. The app is self-contained
 # under src/flyforager_q (Python, sketch, and the C++ kernel with its
 # circuit tables), so a single copy deploys everything. The kernel
-# binary is compiled on the board by the app itself on first start.
+# binary is built on the board's host during deploy: the App Lab
+# container has no g++, so the app itself cannot compile it.
 #
 # app.yaml and sketch/ are hashed. When that hash matches
 # ~/ArduinoApps/flyforager_q/.sketch-hash the sketch cache stays, and
@@ -79,6 +80,9 @@ tar -C "$root/src/flyforager_q" \
   | "${ssh[@]}" "$host" "mkdir -p ~/${remote} && tar -C ~/${remote} -xf -"
 
 "${ssh[@]}" "$host" "find ~/${remote} -type d -name __pycache__ -prune -exec rm -rf {} +"
+
+echo "build kernel on the host ${host}:~/${remote}/python/kernel"
+"${ssh[@]}" "$host" "cd ~/${remote}/python/kernel && g++ -O2 -static -o sim sim.cpp && ls -la sim"
 
 echo "sketch cache ${host}:~/${remote}/.cache"
 "${ssh[@]}" "$host" "sh -s -- ${sketch_hash} ${rebuild}" <<'EOF'

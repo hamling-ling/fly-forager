@@ -32,14 +32,27 @@ def parse_result(text: str) -> tuple[float, list[int]]:
 
 
 def ensure_built() -> None:
-    """Compile the kernel on the board when the binary is stale."""
+    """Check the kernel binary is present and current.
+
+    The binary is built on the board's host by the deploy script: the
+    App Lab container has no g++ (that is how v1 first died). This is
+    only a guard with a clear message, plus a fallback build for
+    environments that do have a compiler.
+    """
     if BINARY.exists() and BINARY.stat().st_mtime >= SOURCE.stat().st_mtime:
         return
-    print("kernel: compiling sim.cpp")
-    done = subprocess.run(
-        ["g++", "-O2", "-o", str(BINARY), str(SOURCE)],
-        capture_output=True, text=True, timeout=120,
-    )
+    try:
+        print("kernel: compiling sim.cpp")
+        done = subprocess.run(
+            ["g++", "-O2", "-static", "-o", str(BINARY), str(SOURCE)],
+            capture_output=True, text=True, timeout=120,
+        )
+    except FileNotFoundError:
+        raise RuntimeError(
+            "kernel binary is missing and this container has no g++. "
+            "Deploy with scripts/deploy_flyforager_q.sh, which builds "
+            "the kernel on the board's host."
+        ) from None
     if done.returncode != 0:
         raise RuntimeError(f"kernel build failed: {done.stderr.strip()}")
     print("kernel: built")
