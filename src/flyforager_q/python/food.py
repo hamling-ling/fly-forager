@@ -32,6 +32,17 @@ def eye_to_rate(mean_eye: float) -> float:
     return min(NOMINAL_MAX, NOMINAL_MAX * mean_eye / EYE_FULL)
 
 
+def at_mouth(fill: float) -> bool:
+    """Food at the mouth: the centre-ROI coverage at/above FILL_FULL.
+
+    This is the feeding counter's "at the food" test. The eye-range
+    safety-stop fill (0.75) is a sheet pressed to the face and never
+    happens in a hand-held demo (the eyes sit near 0.2); the centre
+    coverage is the mouth proxy this app started with.
+    """
+    return fill >= FILL_FULL
+
+
 def _food_mask(frame, roi_fraction: float = ROI_FRACTION):
     """Binary mask of the food colour in the frame's centre ROI."""
     import cv2

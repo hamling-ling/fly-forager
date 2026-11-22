@@ -112,6 +112,14 @@ def test_eye_to_rate():
     assert food.eye_to_rate(1.0) == config.NOMINAL_MAX
 
 
+def test_at_mouth():
+    import food
+
+    assert food.at_mouth(0.33)
+    assert food.at_mouth(config.FILL_FULL)
+    assert not food.at_mouth(0.05)
+
+
 def test_pulse_conversion():
     import pulse
 
