@@ -123,6 +123,14 @@ def test_at_mouth():
     assert not food.at_mouth(0.05)
 
 
+def test_arrived():
+    import food
+
+    assert food.arrived(0.77)
+    assert food.arrived(config.ARRIVE_FILL)
+    assert not food.arrived(0.33)
+
+
 def test_pulse_conversion():
     import pulse
 

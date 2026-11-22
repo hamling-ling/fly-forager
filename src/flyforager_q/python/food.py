@@ -8,7 +8,7 @@ the mapping -- nominal rate to MN9 -- is the measured part.
 
 from __future__ import annotations
 
-from config import FOOD_HSV, FILL_FULL, NOMINAL_MAX, ROI_FRACTION
+from config import ARRIVE_FILL, FOOD_HSV, FILL_FULL, NOMINAL_MAX, ROI_FRACTION
 
 
 def fill_to_rate(fill: float) -> float:
@@ -27,6 +27,16 @@ def at_mouth(fill: float) -> bool:
     coverage is the mouth proxy this app started with.
     """
     return fill >= FILL_FULL
+
+
+def arrived(fill: float) -> bool:
+    """At the food: centre coverage at/above ARRIVE_FILL.
+
+    The approach drive stops here and the robot eats in place; the
+    feeding counter (at_mouth) uses the lower FILL_FULL bar, this is
+    the arrival bar. Pure, so it is testable.
+    """
+    return fill >= ARRIVE_FILL
 
 
 def _food_mask(frame, roi_fraction: float = ROI_FRACTION):

@@ -42,6 +42,12 @@ MANUAL_RATE: float | None = None
 # rate is NOMINAL_MAX at FILL_FULL coverage of the frame's centre.
 NOMINAL_MAX = 150.0
 FILL_FULL = 0.25
+# Arrival at the food, feeding layer's scale: centre coverage this
+# high means the sheet is at the mouth, so approach stops (it eats
+# in place). fly-car's safety stop (both eyes at 0.75) stays as the
+# outer guard; with the 90-degree camera a hand-held sheet rarely
+# covers the frame corners enough to reach it (eyes sit near 0.5).
+ARRIVE_FILL = 0.60
 ROI_FRACTION = 0.6
 
 # Food colour in OpenCV HSV (H 0-179). Default is red, in two bands
@@ -67,7 +73,7 @@ STATE_FILE = Path(__file__).resolve().parents[1] / "state.txt"
 # runs 0 (hungry) to 1 (satiated); each EAT adds 1/EATS_TO_FULL, and
 # the level drains back to 0 over HUNGER_RETURN_S seconds.
 EATS_TO_FULL = 5
-HUNGER_RETURN_S = 60.0
+HUNGER_RETURN_S = 600.0
 
 
 def read_state(path: Path = STATE_FILE) -> str:

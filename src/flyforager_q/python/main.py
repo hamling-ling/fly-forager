@@ -41,7 +41,7 @@ from config import (
     params_at,
     read_state,
 )
-from food import at_mouth, food_fill_lr, red_eyes
+from food import arrived, at_mouth, food_fill_lr, red_eyes
 from plant import Plant, pn_outputs
 from pulse import wheel_pulses
 
@@ -127,9 +127,13 @@ def loop() -> None:
                 plant.sigma = 1.0 if eat else 0.0
                 step = plant.steps(red_l, red_r, place=place)
                 right, left = wheel_pulses(step.v_left, step.v_right)
+                mode = step.mode
+                if arrived(fill):
+                    # At the food: stop approaching, eat in place.
+                    right, left, mode = 0, 0, "arrive"
                 drive.send(right, left)
                 move = (
-                    f"  move {step.mode} R{right} L{left}"
+                    f"  move {mode} R{right} L{left}"
                     f"  dna {plant.dna_l.rate:.0f}/{plant.dna_r.rate:.0f}"
                     f"  sigma {plant.sigma:.0f}"
                 )
