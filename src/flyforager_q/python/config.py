@@ -118,5 +118,7 @@ NEAR_FILL = 0.20      # at/above this coverage the robot is at the food
 CRUISE_PULSE = 70     # approach speed
 STEER_GAIN = 35       # pulse difference at full left/right imbalance
 SEARCH_PULSE = 50     # in-place scan turn while nothing is seen
+SEARCH_BURST_S = 0.4  # search turns in short bursts, then stops and
+                      # looks; a full 2 s hold spins ~300 degrees
 BACK_RIGHT = -55      # reject: arc away backwards for one cycle
 BACK_LEFT = -35

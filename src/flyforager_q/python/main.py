@@ -33,6 +33,7 @@ from config import (
     EAT_THRESHOLD_HZ,
     KERNEL_SEED,
     MANUAL_RATE,
+    SEARCH_BURST_S,
     STATES,
     TRIALS,
     Satiety,
@@ -103,6 +104,11 @@ def loop() -> None:
                 mode, right, left = decide_motion(fill, fill_l, fill_r, eat)
                 drive.send(right, left)
                 move = f"  move {mode} R{right} L{left}"
+                if mode == "search":
+                    # Burst, then stop and look: holding the turn for
+                    # the whole cycle spins the camera past everything.
+                    time.sleep(SEARCH_BURST_S)
+                    drive.send(0, 0)
             print(
                 f"state {label}  k_p {k_p:.2f}  g_gaba {g_gaba:.2f}  "
                 f"{seen}nominal {nominal:.0f} Hz  "
