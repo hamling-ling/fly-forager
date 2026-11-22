@@ -75,6 +75,50 @@ STATE_FILE = Path(__file__).resolve().parents[1] / "state.txt"
 EATS_TO_FULL = 5
 HUNGER_RETURN_S = 600.0
 
+# Demo timing overrides live OUTSIDE git, in tuning.txt next to
+# state.txt (the app root). Deploys copy this tree over the board's
+# app dir but never delete files that are not in the tree, and the
+# file is gitignored, so tuned values survive pulls and deploys --
+# editing the constants above used to clobber them on every pull.
+TUNING_FILE = Path(__file__).resolve().parents[1] / "tuning.txt"
+
+
+def parse_tuning(text: str) -> dict:
+    """'KEY = value' lines -> overrides for the two timings. Pure."""
+    out: dict = {}
+    for line in text.splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key, value = key.strip(), value.strip()
+        try:
+            if key == "EATS_TO_FULL":
+                out[key] = int(value)
+            elif key == "HUNGER_RETURN_S":
+                out[key] = float(value)
+        except ValueError:
+            continue
+    return out
+
+
+def _apply_tuning() -> None:
+    global EATS_TO_FULL, HUNGER_RETURN_S
+    try:
+        text = TUNING_FILE.read_text()
+    except OSError:
+        return
+    applied = parse_tuning(text)
+    if "EATS_TO_FULL" in applied:
+        EATS_TO_FULL = applied["EATS_TO_FULL"]
+    if "HUNGER_RETURN_S" in applied:
+        HUNGER_RETURN_S = applied["HUNGER_RETURN_S"]
+    if applied:
+        print(f"config: tuning.txt overrides {applied}")
+
+
+_apply_tuning()
+
 
 def read_state(path: Path = STATE_FILE) -> str:
     """State name (or "auto") from the state file, or DEFAULT_STATE."""
