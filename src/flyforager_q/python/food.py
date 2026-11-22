@@ -18,8 +18,8 @@ def fill_to_rate(fill: float) -> float:
     return min(NOMINAL_MAX, NOMINAL_MAX * fill / FILL_FULL)
 
 
-def food_fill(frame) -> float:
-    """Coverage of the food colour in the frame's centre ROI, 0..1."""
+def _food_mask(frame):
+    """Binary mask of the food colour in the frame's centre ROI."""
     import cv2
     import numpy as np
 
@@ -36,4 +36,28 @@ def food_fill(frame) -> float:
             np.array([h_hi, s_hi, v_hi]),
         )
         mask = cv2.bitwise_or(mask, band)
+    return mask
+
+
+def food_fill(frame) -> float:
+    """Coverage of the food colour in the frame's centre ROI, 0..1."""
+    import numpy as np
+
+    mask = _food_mask(frame)
     return float(np.count_nonzero(mask)) / float(mask.size)
+
+
+def food_fill_lr(frame) -> tuple[float, float, float]:
+    """(total, left, right) coverage: total over the ROI, and the
+    coverage within each half of it, for steering toward the food."""
+    import numpy as np
+
+    mask = _food_mask(frame)
+    half = mask.shape[1] // 2
+    left = mask[:, :half]
+    right = mask[:, half:]
+    return (
+        float(np.count_nonzero(mask)) / float(mask.size),
+        float(np.count_nonzero(left)) / float(left.size),
+        float(np.count_nonzero(right)) / float(right.size),
+    )

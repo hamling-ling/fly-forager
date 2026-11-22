@@ -3,8 +3,8 @@
 States are the Experiment D parameter sets, measured on the full brain
 and reproduced by the extracted subcircuit. A state is only a pair
 (k_p, g_gaba): peripheral input gain and GABAergic brake tone. The
-presets are the measured endpoints; nothing here interpolates between
-them yet.
+presets are the measured points; "auto" mode interpolates between
+them (the intermediate points were measured in silico on 2026-11-22).
 """
 
 from __future__ import annotations
@@ -67,7 +67,7 @@ STATE_FILE = Path(__file__).resolve().parents[1] / "state.txt"
 # runs 0 (hungry) to 1 (satiated); each EAT adds 1/EATS_TO_FULL, and
 # the level drains back to 0 over HUNGER_RETURN_S seconds.
 EATS_TO_FULL = 5
-HUNGER_RETURN_S = 30.0
+HUNGER_RETURN_S = 600.0
 
 
 def read_state(path: Path = STATE_FILE) -> str:
@@ -105,3 +105,18 @@ class Satiety:
 
     def elapse(self, seconds: float) -> None:
         self.level = max(0.0, self.level - seconds / HUNGER_RETURN_S)
+
+
+# Drive (presentation layer, like the fill mapping -- tuning numbers,
+# not measurements). Wheel pulses are -255..255 for the sketch's
+# setMotorSpeed; one command is held by the MCU until the next decision
+# (2 s) and the sketch's 3 s watchdog stops the wheels if Python dies.
+# Pulses are kept well above the servos' start threshold; fly-car's
+# straight-line hinge calibration is NOT ported in v1.
+FOOD_VISIBLE = 0.02   # below this coverage the food counts as unseen
+NEAR_FILL = 0.20      # at/above this coverage the robot is at the food
+CRUISE_PULSE = 70     # approach speed
+STEER_GAIN = 35       # pulse difference at full left/right imbalance
+SEARCH_PULSE = 50     # in-place scan turn while nothing is seen
+BACK_RIGHT = -55      # reject: arc away backwards for one cycle
+BACK_LEFT = -35

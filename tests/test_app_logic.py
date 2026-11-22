@@ -75,6 +75,34 @@ def test_params_at_measured_points():
     assert all(a <= b for a, b in zip(gs, gs[1:]))
 
 
+def test_decide_motion():
+    import behavior
+
+    # unseen -> scan turn in place
+    assert behavior.decide_motion(0.01, 0.01, 0.01, False) == (
+        "search",
+        config.SEARCH_PULSE,
+        -config.SEARCH_PULSE,
+    )
+    # at the food: eat stops, refuse arcs away backwards
+    assert behavior.decide_motion(0.22, 0.22, 0.22, True) == ("eat", 0, 0)
+    assert behavior.decide_motion(0.22, 0.22, 0.22, False) == (
+        "reject",
+        config.BACK_RIGHT,
+        config.BACK_LEFT,
+    )
+    # approach: balanced coverage goes straight at cruise
+    mode, right, left = behavior.decide_motion(0.10, 0.10, 0.10, False)
+    assert mode == "approach"
+    assert right == left == config.CRUISE_PULSE
+    # food on the right -> right wheel slower (turn toward it)
+    mode, right, left = behavior.decide_motion(0.10, 0.02, 0.18, False)
+    assert mode == "approach" and right < left
+    # eat away from the food still approaches
+    mode, _, _ = behavior.decide_motion(0.10, 0.10, 0.10, True)
+    assert mode == "approach"
+
+
 def test_satiety_dynamics():
     s = config.Satiety()
     assert s.level == 0.0
