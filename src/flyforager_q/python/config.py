@@ -100,17 +100,35 @@ def params_at(level: float) -> tuple[float, float]:
     return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
 
 
+# Satiety is hysteretic: once full, the robot stays full -- satiated
+# parameters, full LED gauge, no interest -- until the underlying
+# level drains to FULL_RELEASE. Without the latch the level only
+# touches 1.00 for an instant and falls back to ~0.97, so "full"
+# never lasts long enough to read as a state.
+FULL_RELEASE = 0.6
+
+
 class Satiety:
-    """Feeding fills it, time drains it. Level 0..1."""
+    """Feeding fills it, time drains it. Level 0..1, latched full."""
 
     def __init__(self) -> None:
         self.level = 0.0
+        self.full = False
 
     def eat(self) -> None:
         self.level = min(1.0, self.level + 1.0 / EATS_TO_FULL)
+        if self.level >= 1.0:
+            self.full = True
 
     def elapse(self, seconds: float) -> None:
         self.level = max(0.0, self.level - seconds / HUNGER_RETURN_S)
+        if self.full and self.level <= FULL_RELEASE:
+            self.full = False
+
+    @property
+    def effective_level(self) -> float:
+        """The level the circuit and the LED see: pinned at 1 while full."""
+        return 1.0 if self.full else self.level
 
 
 # Drive: fly-car's model lives in plant.py (equations and constants

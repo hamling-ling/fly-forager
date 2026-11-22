@@ -153,3 +153,18 @@ def test_satiety_dynamics():
     assert abs(s.level - 0.5) < 1e-9
     s.elapse(config.HUNGER_RETURN_S)
     assert s.level == 0.0  # floored
+
+
+def test_satiety_full_latch():
+    s = config.Satiety()
+    for _ in range(config.EATS_TO_FULL):
+        s.eat()
+    assert s.full and s.effective_level == 1.0
+    # a little drainage does not end the full state
+    s.elapse(config.HUNGER_RETURN_S * 0.1)
+    assert abs(s.level - 0.9) < 1e-9
+    assert s.full and s.effective_level == 1.0
+    # draining to FULL_RELEASE releases the latch
+    s.elapse(config.HUNGER_RETURN_S * 0.3)
+    assert abs(s.level - config.FULL_RELEASE) < 1e-9
+    assert not s.full and s.effective_level == s.level

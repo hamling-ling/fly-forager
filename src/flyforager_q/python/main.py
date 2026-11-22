@@ -79,8 +79,10 @@ def loop() -> None:
             state = read_state()
             if state == "auto":
                 satiety.elapse(began - last_cycle)
-                k_p, g_gaba = params_at(satiety.level)
-                label = f"auto({satiety.level:.2f})"
+                k_p, g_gaba = params_at(satiety.effective_level)
+                label = f"auto({satiety.effective_level:.2f})"
+                if satiety.full:
+                    label += " full"
             else:
                 k_p, g_gaba = STATES[state]
                 label = state
@@ -116,7 +118,7 @@ def loop() -> None:
             if eat and state == "auto" and at_mouth(fill):
                 satiety.eat()
             level = (
-                satiety.level if state == "auto" else STATE_LEVELS[state]
+                satiety.effective_level if state == "auto" else STATE_LEVELS[state]
             )
             proboscis.show(mean, eat, level)
             move = ""
