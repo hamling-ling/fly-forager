@@ -155,19 +155,6 @@ def test_satiety_dynamics():
     assert s.level == 0.0  # floored
 
 
-def test_parse_tuning():
-    text = """
-# demo timings
-EATS_TO_FULL = 6
-HUNGER_RETURN_S = 75
-BOGUS = 1
-EATS_TO_FULL = nope
-"""
-    applied = config.parse_tuning(text)
-    assert applied == {"EATS_TO_FULL": 6, "HUNGER_RETURN_S": 75.0}
-    assert config.parse_tuning("") == {}
-
-
 def test_satiety_full_latch():
     s = config.Satiety()
     for _ in range(config.EATS_TO_FULL):

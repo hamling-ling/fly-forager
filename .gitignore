@@ -239,6 +239,3 @@ src/flyforager_q/python/kernel/*.bin
 
 # 実機ログの置き場
 logs/
-
-# デモ用タイミングの上書き（各自の環境だけに置く。config.py の既定値を守るため）
-src/flyforager_q/tuning.txt
