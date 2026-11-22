@@ -1,5 +1,10 @@
 # scripts
 
+## 実機へのデプロイ
+
+`deploy_flyforager_q.sh` が flyforager_q を UNO Q にデプロイする
+（fly-car の deploy と同じ流儀）。使い方は `src/flyforager_q/README.md`。
+
 ## 全脳データの入手
 
 全脳モデルで実験を再現するには、次の2つを `data/` に置く（どちらもこのリポジトリには含めない）。

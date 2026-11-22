@@ -230,3 +230,6 @@ flywire_annotations/
 results*/
 data/*
 !data/.gitkeep
+
+# カーネルのバイナリはボード上でビルドする
+src/flyforager_q/python/kernel/sim

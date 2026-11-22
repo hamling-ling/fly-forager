@@ -1,0 +1,7 @@
+# 本番の App Lab アプリ。カメラで餌を見て、採餌回路で判断し、LED マトリクスに口吻を表示する。
+
+name: flyforager_q
+description: カメラで餌を見て、ハエの採餌回路で食べるかどうか判断し、LED に表示する
+icon: 🪰
+ports: []
+bricks: []

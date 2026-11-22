@@ -15,9 +15,10 @@
 ## 構成
 
 - `src/flyforager/` — パッケージ。`subcircuit/` に抽出回路の索引（CSV）が入る。接続表の本体（parquet）は Release で配る
+- `src/flyforager_q/` — 実機アプリ（UNO Q）。Python メイン + C++ 判断カーネル + LED 口吻スケッチ。詳細は中の README
 - `research/` — 設計書と決定シート
 - `docs/poster/` — ポンチ絵
-- `scripts/` — 全脳データの入手手順
+- `scripts/` — 全脳データの入手手順と、実機への deploy スクリプト
 - `data/` — 全脳データの置き場（中身はリポジトリに入れない）
 
 ## 必要な環境
