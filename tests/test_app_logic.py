@@ -103,13 +103,16 @@ def test_plant_gate():
     assert step.v_left == 0.0 and step.v_right == 0.0
 
 
-def test_eye_to_rate():
-    import food
+def test_pn_outputs_shared_input():
+    import plant
 
-    assert food.eye_to_rate(0.0) == 0.0
-    assert food.eye_to_rate(0.375) == 75.0
-    assert food.eye_to_rate(food.EYE_FULL) == config.NOMINAL_MAX
-    assert food.eye_to_rate(1.0) == config.NOMINAL_MAX
+    assert plant.pn_outputs(0.0, 0.0) == (0.0, 0.0)
+    u_l, u_r = plant.pn_outputs(0.75, 0.75)
+    assert abs(u_l - 0.9375) < 1e-9 and abs(u_r - 0.9375) < 1e-9
+    # the edge case from the 2026-11-22 log: 0.06 coverage at the
+    # right edge drives DNa02 hard, and the PN stage must show it
+    u_l, u_r = plant.pn_outputs(0.0, 0.06, place=1.0)
+    assert u_l == 0.0 and abs(u_r - 0.75) < 1e-9
 
 
 def test_at_mouth():

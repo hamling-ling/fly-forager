@@ -72,13 +72,26 @@ def prime_concentration(
     return (gain * float(red_l), gain * float(red_r))
 
 
+def pn_outputs(
+    red_l: float, red_r: float, place: float = 0.0
+) -> tuple[float, float]:
+    """PN output per eye: saturation of the place-gained fractions.
+
+    This is the stage the feeding circuit shares: its nominal input
+    rate is NOMINAL_MAX times the mean PN output, so the gate reads
+    the same transformed signal that drives DNa02 -- including the
+    edge amplification, which raw coverage misses (a small red at
+    the frame edge drives DNa02 hard at ~0.06 coverage).
+    """
+    c_l, c_r = prime_concentration(red_l, red_r, place)
+    return (pn(c_l), pn(c_r))
+
+
 def dna_current(
     red_l: float, red_r: float, place: float = 0.0
 ) -> tuple[float, float]:
     """DNa02 current. Each side keeps its PN and subtracts the other."""
-    c_l, c_r = prime_concentration(red_l, red_r, place)
-    u_l = pn(c_l)
-    u_r = pn(c_r)
+    u_l, u_r = pn_outputs(red_l, red_r, place)
     return (ALPHA * (u_l - BETA * u_r), ALPHA * (u_r - BETA * u_l))
 
 

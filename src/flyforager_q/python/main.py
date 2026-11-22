@@ -33,14 +33,15 @@ from config import (
     EAT_THRESHOLD_HZ,
     KERNEL_SEED,
     MANUAL_RATE,
+    NOMINAL_MAX,
     STATES,
     TRIALS,
     Satiety,
     params_at,
     read_state,
 )
-from food import at_mouth, eye_to_rate, food_fill_lr, red_eyes
-from plant import Plant
+from food import at_mouth, food_fill_lr, red_eyes
+from plant import Plant, pn_outputs
 from pulse import wheel_pulses
 
 # Satiety level for the LED gauge in the fixed states: the anchors
@@ -89,7 +90,10 @@ def loop() -> None:
                     continue
                 fill, _fl, _fr = food_fill_lr(frame)
                 red_l, red_r, place = red_eyes(frame)
-                nominal = eye_to_rate(0.5 * (red_l + red_r))
+                # The kernel reads the PN stage of the same eyes:
+                # nominal = NOMINAL_MAX x mean PN output.
+                u_l, u_r = pn_outputs(red_l, red_r, place)
+                nominal = NOMINAL_MAX * 0.5 * (u_l + u_r)
                 seen = f"fill {fill:.3f}  eye {red_l:.2f}/{red_r:.2f}  "
             else:
                 nominal = float(MANUAL_RATE)
