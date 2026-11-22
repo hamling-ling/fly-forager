@@ -51,3 +51,11 @@ python/kernel/ の .bin は抽出回路の接続表（CSR 形式）。
 w_base.bin が重み、gaba.bin が GABA ゲインを掛ける結合のマスク
 （糖 GRN の出力は除外、実験 D の手順どおり）。
 出所と検証値は research/ と親リポジトリの README を参照。
+
+.bin はリポジトリに入れず、Release（タグ `kernel-v1`）の
+`kernel-data.zip` で配る。clone のあとに次を実行すると、
+SHA256 とサイズを照合して python/kernel/ に配置される。
+
+```
+scripts/download_kernel_data.sh
+```

@@ -42,6 +42,14 @@ done
 remote=ArduinoApps/flyforager_q
 ssh=(ssh -o BatchMode=yes -o ConnectTimeout=10)
 
+kernel_dir="$root/src/flyforager_q/python/kernel"
+for bin in gaba.bin indptr.bin post.bin sugar.bin w_base.bin; do
+  if [[ ! -f "$kernel_dir/$bin" ]]; then
+    echo "kernel data missing: $bin (run scripts/download_kernel_data.sh first)" >&2
+    exit 1
+  fi
+done
+
 sketch_hash=$(
   tar -C "$root/src/flyforager_q" \
     --sort=name \
