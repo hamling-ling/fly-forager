@@ -46,16 +46,21 @@ fly-car の flycar_q に倣う。
 
 ## 駆動 — fly-car のモデル＋採餌ゲート
 
-駆動は fly-car の数理モデルそのもの（plant.py に flycar.behavior
-から移植：PN 飽和、交差読み出し、車輪フィルタ、回転キャップ、
-赤の安全停止。pulse.py に flycar.pulse のデッドバンド変換）。
-変更は1か所だけで、読み出しの接近項（DNa02）に採餌回路の
-ゲート σ が掛かる:
+駆動は [fly-car の数理モデル](https://github.com/hamling-ling/fly-car/blob/main/poster/poster.md)
+そのもの（plant.py に flycar.behavior から移植。pulse.py に
+flycar.pulse のデッドバンド変換）。変更は1か所だけで、読み出しの
+接近項（DNa02）に採餌回路のゲート σ が掛かる:
 
 $$
 v_L = k \cdot \left(\sigma \cdot r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
-v_R = k \cdot \left(\sigma \cdot r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right), \qquad
-\sigma = \begin{cases} 1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz}\ (\mathrm{EAT}) \\ 0 & \mathrm{refuse} \end{cases}
+v_R = k \cdot \left(\sigma \cdot r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right)
+$$
+
+$$
+\sigma = \begin{cases}
+1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz}\ (\mathrm{EAT}) \\
+0 & \mathrm{refuse}
+\end{cases}
 $$
 
 $k$ は関数ではなく定数で、発火率を車輪速度に換算する係数
@@ -111,8 +116,14 @@ GABA 作動性出力の重みに $g_{\mathrm{GABA}}$ を掛ける。1 秒試行�
 MN9 スパイク数を $N_j$ として、
 
 $$
-\widehat{\mathrm{MN9}} = \frac{N_j + N_{j-1}}{2}\ \mathrm{Hz}, \qquad
-\sigma = \begin{cases} 1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz} \\ 0 & \text{それ以外} \end{cases}
+\widehat{\mathrm{MN9}} = \frac{N_j + N_{j-1}}{2}\ \mathrm{Hz}
+$$
+
+$$
+\sigma = \begin{cases}
+1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz} \\
+0 & \text{それ以外}
+\end{cases}
 $$
 
 駆動の読み出し（fly-car の交差読み出し＋ゲート $\sigma$ ）：
