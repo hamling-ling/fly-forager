@@ -110,12 +110,19 @@ $r^{\mathrm{DNp01}}$ は loom（LC4／LPLC2 → DNp01、fly-car と同一）
 
 $$
 \frac{ds}{dt} = \begin{cases}
-+\dfrac{1}{\mathrm{EATS\_TO\_FULL} \cdot \mathrm{EAT\_STEP\_S}} & \sigma = 1 \text{ かつ } \mathrm{fill} \ge \mathrm{FILL\_FULL} \\
--\dfrac{1}{\mathrm{HUNGER\_RETURN\_S}} & \text{それ以外}
++\dfrac{1}{T_{\mathrm{eat}}} & \sigma = 1 \text{ かつ } \mathrm{fill} \ge f_{\mathrm{full}} \\
+-\dfrac{1}{T_{\mathrm{hungry}}} & \text{それ以外}
 \end{cases}
 $$
 
-$s$ が 1 に達するとラッチし、$s$ が $\mathrm{FULL\_RELEASE} = 0.6$
+ここで $T_{\mathrm{eat}}$ は満腹までの食事時間（config の
+`EATS_TO_FULL` × `EAT_STEP_S` = 12 秒）、$T_{\mathrm{hungry}}$ は
+空腹に戻る時間（`HUNGER_RETURN_S` = 30 秒）、$f_{\mathrm{full}}$ は
+口元の被覆率の閾値（`FILL_FULL` = 0.25）。数式の中で config 定数名を
+そのまま書かないのは、GitHub の数式処理が `\_` を落として
+`EATS_TO_FULL` のような名前が二重下付き添字エラーになるため。
+
+$s$ が 1 に達するとラッチし、$s$ が `FULL_RELEASE` $= 0.6$
 まで下がる間は実効満腹度 $s_{\mathrm{eff}} = 1$ を保つ（それ以外は
 $s_{\mathrm{eff}} = s$）。パラメータは $s_{\mathrm{eff}}$ の区分線形
 補間で、測定点を通る：
@@ -125,8 +132,8 @@ $s_{\mathrm{eff}} = s$）。パラメータは $s_{\mathrm{eff}}$ の区分線�
 | $k_p$ | 1.5 | 1.0 | 0.67 |
 | $g_{\mathrm{GABA}}$ | 0.7 | 1.0 | 1.3 |
 
-到着停止（提示層）：$\mathrm{fill} \ge \mathrm{ARRIVE\_FILL} = 0.60$
-で車輪を止めてその場で食べる。ただし逃避中（mode back）はそちらが
+到着停止（提示層）：$\mathrm{fill} \ge 0.60$（`ARRIVE_FILL`）で
+車輪を止めてその場で食べる。ただし逃避中（mode back）はそちらが
 優先する。
 
 ## 状態（空腹／満腹）
