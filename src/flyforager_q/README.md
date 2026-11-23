@@ -34,13 +34,14 @@ hungry = 空、base = 半分、satiated = 全点灯。ベンチモード
 ゲート σ が掛かる:
 
 $$
-v_L = k\left(\sigma\, r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
-v_R = k\left(\sigma\, r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right), \qquad
+v_L = k \cdot \left(\sigma\, r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
+v_R = k \cdot \left(\sigma\, r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right), \qquad
 \sigma = \begin{cases} 1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz}\ (\mathrm{EAT}) \\ 0 & \mathrm{refuse} \end{cases}
 $$
 
-満腹で refuse になれば赤への接近だけが消え、逃避項と安全停止は
-そのまま残る。目の入力（赤の左右レンジ被覆率と重心 place）は
+$k$ は関数ではなく定数で、発火率を車輪速度に換算する係数
+（コードでは FORWARD_PER_HZ）。満腹で refuse になれば赤への
+接近だけが消え、逃避項と安全停止はそのまま残る。目の入力（赤の左右レンジ被覆率と重心 place）は
 food.py の red_eyes が flycar.occupancy と同じ定義で測り、
 採餌回路への公称レートは同じ目の PN 段出力の平均 × 150 Hz。
 生の被覆率だと、端の小さい赤（被覆率 0.06 でも place 利得で
@@ -98,8 +99,8 @@ $$
 駆動の読み出し（fly-car の交差読み出し＋ゲート $\sigma$ ）：
 
 $$
-v_L = k\left(\sigma\, r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
-v_R = k\left(\sigma\, r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right)
+v_L = k \cdot \left(\sigma\, r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
+v_R = k \cdot \left(\sigma\, r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right)
 $$
 
 $r^{\mathrm{DNp01}}$ は loom（LC4／LPLC2 → DNp01、fly-car と同一）
