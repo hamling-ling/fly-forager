@@ -23,6 +23,20 @@ DEFAULT_STATE = "base"
 # The 10 Hz proboscis threshold is Experiment D's pre-registered readout.
 EAT_THRESHOLD_HZ = 10.0
 
+# The gate on the approach term is a smooth sigmoid of the MN9
+# estimate, centred on the threshold -- the same switch shape as
+# fly-car's loom gain in the poster. SIGMA_WIDTH_HZ is its width in
+# Hz: sigma is 0.5 at the threshold and nearly 1 a few widths above.
+SIGMA_WIDTH_HZ = 2.0
+
+
+def sigma_of(mn9_hz: float) -> float:
+    """Feeding gate, 0..1, from the current MN9 estimate."""
+    from math import exp
+
+    z = (mn9_hz - EAT_THRESHOLD_HZ) / SIGMA_WIDTH_HZ
+    return 1.0 / (1.0 + exp(-z))
+
 # There is no decision cycle: the kernel thread runs 1 s trials back
 # to back (one trial is ~0.2 s of wall time on the Uno Q) and the
 # main loop reads the newest MN9 estimate. The loop's slice -- how
@@ -108,38 +122,28 @@ def params_at(level: float) -> tuple[float, float]:
     return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
 
 
-# Satiety is hysteretic: once full, the robot stays full -- satiated
-# parameters, full LED gauge, no interest -- until the underlying
-# level drains to FULL_RELEASE. Without the latch the level only
-# touches 1.00 for an instant and falls back to ~0.97, so "full"
-# never lasts long enough to read as a state.
-FULL_RELEASE = 0.6
-
-
 class Satiety:
-    """Feeding fills it, time drains it. Level 0..1, latched full."""
+    """Feeding fills it, time drains it. Level 0..1.
+
+    The level itself is the state: the circuit parameters, the LED
+    gauge and the log all read it directly, with no latch on top.
+    Satiety is the dose-response curve shifting with the level, not
+    a refusal switch, so a full robot still eats concentrated food
+    -- exactly what the measured satiated curve says it should.
+    """
 
     def __init__(self) -> None:
         self.level = 0.0
-        self.full = False
 
     def feed(self, seconds: float) -> None:
         """Eating for `seconds` fills the level by that much time."""
         gain = seconds / (EATS_TO_FULL * EAT_STEP_S)
         self.level = min(1.0, self.level + gain)
-        if self.level > 1.0 - 1e-9:  # sixths do not sum to 1 exactly
+        if self.level > 1.0 - 1e-9:  # float steps do not sum to 1 exactly
             self.level = 1.0
-            self.full = True
 
     def elapse(self, seconds: float) -> None:
         self.level = max(0.0, self.level - seconds / HUNGER_RETURN_S)
-        if self.full and self.level <= FULL_RELEASE:
-            self.full = False
-
-    @property
-    def effective_level(self) -> float:
-        """The level the circuit and the LED see: pinned at 1 while full."""
-        return 1.0 if self.full else self.level
 
 
 # Drive: fly-car's model lives in plant.py (equations and constants

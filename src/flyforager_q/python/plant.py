@@ -7,8 +7,8 @@ cap, the red safety stop), with exactly one change, in wheel_speeds:
     v_L = k (sigma * r_R^DNa02 - r_R^DNp01)
     v_R = k (sigma * r_L^DNa02 - r_L^DNp01)
 
-sigma is the feeding gate: 1 when the feeding circuit ate (mean MN9
->= the 10 Hz threshold), 0 when it refused. It multiplies only the
+sigma is the feeding gate: a sigmoid of the feeding circuit's MN9
+estimate, centred on the 10 Hz threshold. It multiplies only the
 approach (DNa02) term; the escape (DNp01) term and the safety stop
 are untouched, so a satiated robot still flees a looming blue and
 still stops at a red sheet held against it.

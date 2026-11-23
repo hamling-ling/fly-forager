@@ -48,6 +48,7 @@ from config import (
     Satiety,
     params_at,
     read_state,
+    sigma_of,
 )
 from food import arrived, at_mouth, food_fill_lr, red_eyes
 from occupancy import Counts
@@ -147,10 +148,8 @@ def loop() -> None:
             if began - last_log >= LOG_S:
                 state = read_state()
             if state == "auto":
-                k_p, g_gaba = params_at(satiety.effective_level)
-                label = f"auto({satiety.effective_level:.2f})"
-                if satiety.full:
-                    label += " full"
+                k_p, g_gaba = params_at(satiety.level)
+                label = f"auto({satiety.level:.2f})"
             else:
                 k_p, g_gaba = STATES[state]
                 label = state
@@ -185,14 +184,14 @@ def loop() -> None:
                 else:
                     satiety.elapse(dt)
             level = (
-                satiety.effective_level if state == "auto" else STATE_LEVELS[state]
+                satiety.level if state == "auto" else STATE_LEVELS[state]
             )
             move = ""
             if eye is not None:
                 # The feeding gate on fly-car's approach term: sigma
                 # follows the current MN9 estimate, the membranes
                 # advance by the wall time since the previous slice.
-                plant.sigma = 1.0 if eat else 0.0
+                plant.sigma = sigma_of(mn9)
                 step = plant.steps(
                     red_l, red_r, blue_l, blue_r, loom=loom, place=place
                 )
@@ -205,7 +204,7 @@ def loop() -> None:
                 move = (
                     f"  move {mode} R{right} L{left}"
                     f"  dna {plant.dna_l.rate:.0f}/{plant.dna_r.rate:.0f}"
-                    f"  sigma {plant.sigma:.0f}"
+                    f"  sigma {plant.sigma:.2f}"
                 )
             if began - last_log >= LOG_S:
                 last_log = began

@@ -57,10 +57,7 @@ v_R = k \cdot \left(\sigma \cdot r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\rig
 $$
 
 $$
-\sigma = \begin{cases}
-1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz}\ (\mathrm{EAT}) \\
-0 & \mathrm{refuse}
-\end{cases}
+\sigma = \frac{1}{1 + \exp\left(-\dfrac{\widehat{\mathrm{MN9}} - \theta}{w}\right)}, \qquad \theta = 10\ \mathrm{Hz}
 $$
 
 記号の説明：
@@ -71,7 +68,10 @@ $$
 - $r^{\mathrm{DNp01}}$ は逃避を担う下降ニューロン DNp01 の発火率。
   青の膨張（loom）が駆動する
 - $k$ は発火率を車輪速度に換算する係数（コードでは `FORWARD_PER_HZ`）
-- $\sigma$ は採餌ゲートで、0 か 1 のどちらか
+- $\sigma$ は採餌ゲートで、0 から 1 の連続値。 $\widehat{\mathrm{MN9}}$ の
+  sigmoid で、閾値 $\theta$ で 0.5 になる。幅 $w$ は config の
+  `SIGMA_WIDTH_HZ`。満腹が進んで $\widehat{\mathrm{MN9}}$ が下がると、
+  接近も滑らかに弱まる
 - $\widehat{\mathrm{MN9}}$ は採餌回路の運動ニューロン MN9 の発火率の
   推定値。カーネルが回し続ける 1 秒試行の直近2回の平均で、
   10 Hz 以上なら「食べる（EAT）」、未満なら「食べない（refuse）」
@@ -138,11 +138,13 @@ $$
 $$
 
 $$
-\sigma = \begin{cases}
-1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz} \\
-0 & \text{それ以外}
-\end{cases}
+\sigma = \frac{1}{1 + \exp\left(-\dfrac{\widehat{\mathrm{MN9}} - \theta}{w}\right)}, \qquad \theta = 10\ \mathrm{Hz}
 $$
+
+$\theta$ は実験Dの閾値、 $w$ は sigmoid の幅（config の
+`SIGMA_WIDTH_HZ`）。 $\sigma$ は車輪へのゲートにだけ使う連続量で、
+食べる／食べないの二値の判定（LED とログの表示、満腹度の加算）は
+$\widehat{\mathrm{MN9}} \ge \theta$ のままである。
 
 駆動の読み出し（fly-car の交差読み出し＋ゲート $\sigma$ ）：
 
@@ -159,7 +161,7 @@ $r^{\mathrm{DNp01}}$ は loom（LC4／LPLC2 → DNp01、fly-car と同一）
 
 $$
 \frac{ds}{dt} = \begin{cases}
-+\dfrac{1}{T_{\mathrm{eat}}} & \sigma = 1 \text{ かつ } \varphi \ge \varphi_{\mathrm{full}} \\
++\dfrac{1}{T_{\mathrm{eat}}} & \widehat{\mathrm{MN9}} \ge \theta \text{ かつ } \varphi \ge \varphi_{\mathrm{full}} \\
 -\dfrac{1}{T_{\mathrm{hungry}}} & \text{それ以外}
 \end{cases}
 $$
@@ -170,53 +172,29 @@ $$
 中央 ROI の赤被覆率、 $\varphi_{\mathrm{full}}$ は「口元」の
 閾値（config の `FILL_FULL`）。
 
-$s_{\mathrm{eff}}$ は $s$ の現在値だけでは決まらず、履歴に依存する
-（ヒステリシス）。ラッチという内部状態がもう1つあり、
-
-$$
-s_{\mathrm{eff}} = \begin{cases}
-1 & \text{ラッチ中} \\
-s & \text{それ以外}
-\end{cases}
-\qquad
-\begin{array}{ll}
-\text{ラッチに入る：} & s \text{ が } 1 \text{ に達したとき} \\
-\text{ラッチが解ける：} & s \text{ が } \mathrm{FULL\_RELEASE} \text{ 以下になったとき}
-\end{array}
-$$
-
-![満腹度のヒステリシス](../../docs/images/satiety-hysteresis.png)
-
-$s$ を横軸、 $s_{\mathrm{eff}}$ を縦軸にしたヒステリシス。
-上昇時は対角線（ $s_{\mathrm{eff}} = s$ ）をたどって $s = 1$ で
-ラッチし、下降時は $s_{\mathrm{eff}} = 1$ のまま
-$\mathrm{FULL\_RELEASE}$ まで来て、そこで対角線に落ちる。
-だから「いま満腹か」は $s$ だけでは分からず、満腹になったことが
-あるかどうかで変わる。
-
-依存の向きは一方向で、内部状態は満腹度 $s$ のほうであり、
-$s$ から $s_{\mathrm{eff}}$ が決まり、 $s_{\mathrm{eff}}$ から
-パラメータが決まる。パラメータから満腹度が決まることはない。
-パラメータ対は $s_{\mathrm{eff}}$ の区分線形補間で、比例ではない
+内部状態は満腹度 $s$ で、パラメータは $s$ から決まる。
+パラメータから満腹度が決まることはない。パラメータ対
+$(k_p, g_{\mathrm{GABA}})$ は $s$ の区分線形補間で、比例ではない
 （ $k_p$ は下がり、 $g_{\mathrm{GABA}}$ は上がる）：
 
 $$
 k_p = \begin{cases}
-1.5 - 1.0 \cdot s_{\mathrm{eff}} & 0 \le s_{\mathrm{eff}} \le 0.5 \\
-1.0 - 0.66 \cdot (s_{\mathrm{eff}} - 0.5) & 0.5 \le s_{\mathrm{eff}} \le 1
+1.5 - 1.0 \cdot s & 0 \le s \le 0.5 \\
+1.0 - 0.66 \cdot (s - 0.5) & 0.5 \le s \le 1
 \end{cases}
 \qquad
 g_{\mathrm{GABA}} = \begin{cases}
-0.7 + 0.6 \cdot s_{\mathrm{eff}} & 0 \le s_{\mathrm{eff}} \le 0.5 \\
-1.0 + 0.6 \cdot (s_{\mathrm{eff}} - 0.5) & 0.5 \le s_{\mathrm{eff}} \le 1
+0.7 + 0.6 \cdot s & 0 \le s \le 0.5 \\
+1.0 + 0.6 \cdot (s - 0.5) & 0.5 \le s \le 1
 \end{cases}
 $$
 
 端点と中点が測定した3点（hungry／base／satiated）である。
-$s_{\mathrm{eff}}$ が上がる（満腹に近づく）ほど $k_p$ は下がって
-入力の感度が下がり、 $g_{\mathrm{GABA}}$ は上がってブレーキが
-強まる。その結果、用量反応曲線が右へずれ、同じ濃さでも
-食べにくくなる。
+$s$ が上がる（満腹に近づく）ほど $k_p$ は下がって入力の感度が
+下がり、 $g_{\mathrm{GABA}}$ は上がってブレーキが強まる。その
+結果、用量反応曲線が右へずれ、同じ濃さでも食べにくくなる。
+満腹は拒否スイッチではなく曲線の移動なので、満腹でも濃い餌は
+食べる — それが実測した satiated の曲線の答えである。
 
 到着停止（提示層）： $\varphi \ge \varphi_{\mathrm{arr}}$
 （config の `ARRIVE_FILL`）で車輪を止めてその場で食べる。
