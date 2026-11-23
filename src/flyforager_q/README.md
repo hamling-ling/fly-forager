@@ -131,6 +131,23 @@ $\rho$ は採餌回路への公称入力レートで、餌の濃さに相当す�
 GABA 作動性出力の重みに $g_{\mathrm{GABA}}$ を掛ける。その出力に
 ある運動ニューロン MN9 は、ハエでは口吻の筋肉を駆動する細胞で、
 その発火がこのロボットの「食べる」信号になる。1 秒試行の
+MN9 スパイク数を $N_j$ として、回路の構造を図にすると：
+
+```mermaid
+flowchart TD
+    nominal(nominal) -->|× k_p| GRN
+    g_gaba(g_GABA) -->|ブレーキのゲイン| circuit
+
+    subgraph circuit["687ニューロンの回路"]
+        GRN["糖 GRN（入口）"]
+        neurons["中間ニューロン群"]
+        MN9["MN9（出口）"]
+        GRN --> neurons --> MN9
+    end
+
+    MN9 --> output
+```
+
 MN9 スパイク数を $N_j$ として、
 
 $$
