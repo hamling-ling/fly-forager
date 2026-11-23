@@ -165,7 +165,7 @@ $$
 \sigma = \frac{1}{1 + \exp\left(-\dfrac{\widehat{\mathrm{MN9}} - \theta}{w}\right)}, \qquad \theta = 10\ \mathrm{Hz}
 $$
 
-$\theta$ は実験Dの閾値、 $w$ は sigmoid の幅（config の
+$\theta$ は閾値、 $w$ は sigmoid の幅（config の
 `SIGMA_WIDTH_HZ`）。 $\sigma$ は車輪へのゲートにだけ使う連続量で、
 食べる／食べないの二値の判定（LED とログの表示、満腹度の加算）は
 $\widehat{\mathrm{MN9}} \ge \theta$ のままである。
@@ -226,7 +226,7 @@ $s$ が上がる（満腹に近づく）ほど $k_p$ は下がって入力の感
 
 ## 状態（空腹／満腹）
 
-状態は実験 D の実測パラメータ対（k_p, g_gaba）：
+状態は実測パラメータ対（k_p, g_gaba）：
 
 | 状態 | k_p | g_gaba | 効き方（実測） |
 |---|---|---|---|
@@ -303,7 +303,7 @@ scripts/logs_flyforager_q.sh
 
 python/kernel/ の .bin は抽出回路の接続表（CSR 形式）。
 w_base.bin が重み、gaba.bin が GABA ゲインを掛ける結合のマスク
-（糖 GRN の出力は除外、実験 D の手順どおり）。
+（糖 GRN の出力は除外）。
 出所と検証値は research/ と親リポジトリの README を参照。
 
 .bin はリポジトリに入れず、Release（タグ `kernel-v1`）の
