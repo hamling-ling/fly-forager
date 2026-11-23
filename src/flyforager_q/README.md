@@ -33,11 +33,11 @@ hungry = 空、base = 半分、satiated = 全点灯。ベンチモード
 変更は1か所だけで、読み出しの接近項（DNa02）に採餌回路の
 ゲート σ が掛かる:
 
-```
-v_L = k (σ・r_R^DNa02 − r_R^DNp01)
-v_R = k (σ・r_L^DNa02 − r_L^DNp01)
-σ = 1 （MN9 ≥ 10 Hz = EAT）／ 0 （refuse）
-```
+$$
+v_L = k\left(\sigma\, r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
+v_R = k\left(\sigma\, r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right), \qquad
+\sigma = \begin{cases} 1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz}\ (\mathrm{EAT}) \\ 0 & \mathrm{refuse} \end{cases}
+$$
 
 満腹で refuse になれば赤への接近だけが消え、逃避項と安全停止は
 そのまま残る。目の入力（赤の左右レンジ被覆率と重心 place）は
@@ -72,57 +72,62 @@ Counts は flycar_q と同じ 10 Hz で別スレッドが更新し、メイン�
 全体は、視覚回路と採餌回路が並行に流れ、2本の信号だけで結合した
 系である。判断周期はなく、すべての量は連続時間の関数。
 
-目の変換（fly-car と同一の PN 段、i ∈ {L, R}）：
+目の変換（fly-car と同一の PN 段、$i \in \{L, R\}$、$c_i$ は目の
+赤被覆率、$\mathrm{place}$ は赤の重心）：
 
-```
-u_i = PN(c_i, place)        c_i: 目の赤被覆率、place: 赤の重心
-```
+$$
+u_i = \mathrm{PN}(c_i, \mathrm{place})
+$$
 
 採餌回路への入力は、DNa02 を駆動するのと同じ変換後の信号：
 
-```
-ρ = ρ_max ・ (u_L + u_R) / 2,   ρ_max = 150 Hz
-実効入力レート = k_p ・ ρ   （20 個の糖 GRN への Poisson 入力）
-```
+$$
+\rho = \rho_{\max} \cdot \frac{u_L + u_R}{2}, \qquad \rho_{\max} = 150\ \mathrm{Hz}
+$$
 
-採餌回路は抽出サブサーキット（687 ニューロン、LIF）で、GABA 作動性
-出力の重みに g_gaba を掛ける。1 秒試行の MN9 スパイク数を N_j とし、
+実効入力レートは $k_p \rho$ で、20 個の糖 GRN への Poisson 入力に
+なる。採餌回路は抽出サブサーキット（687 ニューロン、LIF）で、
+GABA 作動性出力の重みに $g_{\mathrm{GABA}}$ を掛ける。1 秒試行の
+MN9 スパイク数を $N_j$ として、
 
-```
-MN9̂ = (N_j + N_{j−1}) / 2   [Hz]   （直近2試行の平均 = 現在の推定値）
-σ = 1  （MN9̂ ≥ 10 Hz）／ 0 （それ以外）
-```
+$$
+\widehat{\mathrm{MN9}} = \frac{N_j + N_{j-1}}{2}\ \mathrm{Hz}, \qquad
+\sigma = \begin{cases} 1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz} \\ 0 & \text{それ以外} \end{cases}
+$$
 
-駆動の読み出し（fly-car の交差読み出し＋ゲート σ）：
+駆動の読み出し（fly-car の交差読み出し＋ゲート $\sigma$）：
 
-```
-v_L = k (σ・r_R^DNa02 − r_R^DNp01)
-v_R = k (σ・r_L^DNa02 − r_L^DNp01)
-```
+$$
+v_L = k\left(\sigma\, r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
+v_R = k\left(\sigma\, r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right)
+$$
 
-r^DNp01 は loom（LC4／LPLC2 → DNp01、fly-car と同一）から来て、
-σ ではゲートされない。回転キャップ・車輪フィルタ・赤の安全停止は
-fly-car のまま。
+$r^{\mathrm{DNp01}}$ は loom（LC4／LPLC2 → DNp01、fly-car と同一）
+から来て、$\sigma$ ではゲートされない。回転キャップ・車輪フィルタ・
+赤の安全停止は fly-car のまま。
 
-満腹度 s ∈ [0, 1] は率で積分する：
+満腹度 $s \in [0, 1]$ は率で積分する：
 
-```
-ds/dt = +1 / (EATS_TO_FULL × EAT_STEP_S)   （σ = 1 かつ fill ≥ FILL_FULL）
-ds/dt = −1 / HUNGER_RETURN_S               （それ以外）
-```
+$$
+\frac{ds}{dt} = \begin{cases}
++\dfrac{1}{\mathrm{EATS\_TO\_FULL} \cdot \mathrm{EAT\_STEP\_S}} & \sigma = 1 \text{ かつ } \mathrm{fill} \ge \mathrm{FILL\_FULL} \\
+-\dfrac{1}{\mathrm{HUNGER\_RETURN\_S}} & \text{それ以外}
+\end{cases}
+$$
 
-s が 1 に達するとラッチし、s が FULL_RELEASE（0.6）まで下がる間は
-実効満腹度 s_eff = 1 を保つ（それ以外は s_eff = s）。パラメータは
-s_eff の区分線形補間で、測定点を通る：
+$s$ が 1 に達するとラッチし、$s$ が $\mathrm{FULL\_RELEASE} = 0.6$
+まで下がる間は実効満腹度 $s_{\mathrm{eff}} = 1$ を保つ（それ以外は
+$s_{\mathrm{eff}} = s$）。パラメータは $s_{\mathrm{eff}}$ の区分線形
+補間で、測定点を通る：
 
-```
-s_eff:    0 (hungry)      0.5 (base)      1 (satiated)
-k_p:      1.5             1.0             0.67
-g_gaba:   0.7             1.0             1.3
-```
+| $s_{\mathrm{eff}}$ | 0 (hungry) | 0.5 (base) | 1 (satiated) |
+| --- | --- | --- | --- |
+| $k_p$ | 1.5 | 1.0 | 0.67 |
+| $g_{\mathrm{GABA}}$ | 0.7 | 1.0 | 1.3 |
 
-到着停止（提示層）：fill ≥ ARRIVE_FILL（0.60）で車輪を止めてその場で
-食べる。ただし逃避中（mode back）はそちらが優先する。
+到着停止（提示層）：$\mathrm{fill} \ge \mathrm{ARRIVE\_FILL} = 0.60$
+で車輪を止めてその場で食べる。ただし逃避中（mode back）はそちらが
+優先する。
 
 ## 状態（空腹／満腹）
 
