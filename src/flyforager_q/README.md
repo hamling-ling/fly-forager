@@ -170,22 +170,64 @@ $$
 中央 ROI の赤被覆率、 $\varphi_{\mathrm{full}}$ は「口元」の
 閾値（config の `FILL_FULL`）。
 
-$s$ が 1 に達するとラッチし、 $s$ が `FULL_RELEASE`
-まで下がる間は実効満腹度 $s_{\mathrm{eff}} = 1$ を保つ（それ以外は
-$s_{\mathrm{eff}} = s$ ）。依存の向きは一方向で、内部状態は
-満腹度 $s$ のほうであり、 $s$ から $s_{\mathrm{eff}}$ が決まり、
-$s_{\mathrm{eff}}$ からパラメータが決まる。パラメータから
-満腹度が決まることはない。パラメータ対 $(k_p, g_{\mathrm{GABA}})$ は
-$s_{\mathrm{eff}}$ の関数で、測定した3点の間を直線でつないだ
-区分線形補間である。 $s_{\mathrm{eff}}$ が上がる（満腹に近づく）
-ほど $k_p$ は下がって入力の感度が下がり、 $g_{\mathrm{GABA}}$ は
-上がってブレーキが強まる。その結果、用量反応曲線が右へずれ、
-同じ濃さでも食べにくくなる。測定点は次の通り：
+$s_{\mathrm{eff}}$ は $s$ の現在値だけでは決まらず、履歴に依存する
+（ヒステリシス）。ラッチという内部状態がもう1つあり、
 
-| $s_{\mathrm{eff}}$ | 0 (hungry) | 0.5 (base) | 1 (satiated) |
-| --- | --- | --- | --- |
-| $k_p$ | 1.5 | 1.0 | 0.67 |
-| $g_{\mathrm{GABA}}$ | 0.7 | 1.0 | 1.3 |
+$$
+s_{\mathrm{eff}} = \begin{cases}
+1 & \text{ラッチ中} \\
+s & \text{それ以外}
+\end{cases}
+\qquad
+\begin{array}{ll}
+\text{ラッチに入る：} & s \text{ が } 1 \text{ に達したとき} \\
+\text{ラッチが解ける：} & s \text{ が } \mathrm{FULL\_RELEASE} \text{ 以下になったとき}
+\end{array}
+$$
+
+```
+s_eff
+1.0 ┤                    ●━━━━━━━━━━━━━━━●
+    │                  ╱ ┃
+    │                ╱   ┃
+    │              ╱     ┃
+    │            ╱       ▼
+    │          ╱       ●
+    │        ╱       ╱
+0.0 ┼──────╱───────╱────────────────────── s
+    0    FULL_RELEASE                    1.0
+```
+
+$s$ を横軸、 $s_{\mathrm{eff}}$ を縦軸にしたヒステリシス。
+上昇時は対角線（ $s_{\mathrm{eff}} = s$ ）をたどって $s = 1$ で
+ラッチし、下降時は $s_{\mathrm{eff}} = 1$ のまま
+$\mathrm{FULL\_RELEASE}$ まで来て、そこで対角線に落ちる。
+だから「いま満腹か」は $s$ だけでは分からず、満腹になったことが
+あるかどうかで変わる。
+
+依存の向きは一方向で、内部状態は満腹度 $s$ のほうであり、
+$s$ から $s_{\mathrm{eff}}$ が決まり、 $s_{\mathrm{eff}}$ から
+パラメータが決まる。パラメータから満腹度が決まることはない。
+パラメータ対は $s_{\mathrm{eff}}$ の区分線形補間で、比例ではない
+（ $k_p$ は下がり、 $g_{\mathrm{GABA}}$ は上がる）：
+
+$$
+k_p = \begin{cases}
+1.5 - 1.0 \cdot s_{\mathrm{eff}} & 0 \le s_{\mathrm{eff}} \le 0.5 \\
+1.0 - 0.66 \cdot (s_{\mathrm{eff}} - 0.5) & 0.5 \le s_{\mathrm{eff}} \le 1
+\end{cases}
+\qquad
+g_{\mathrm{GABA}} = \begin{cases}
+0.7 + 0.6 \cdot s_{\mathrm{eff}} & 0 \le s_{\mathrm{eff}} \le 0.5 \\
+1.0 + 0.6 \cdot (s_{\mathrm{eff}} - 0.5) & 0.5 \le s_{\mathrm{eff}} \le 1
+\end{cases}
+$$
+
+端点と中点が測定した3点（hungry／base／satiated）である。
+$s_{\mathrm{eff}}$ が上がる（満腹に近づく）ほど $k_p$ は下がって
+入力の感度が下がり、 $g_{\mathrm{GABA}}$ は上がってブレーキが
+強まる。その結果、用量反応曲線が右へずれ、同じ濃さでも
+食べにくくなる。
 
 到着停止（提示層）： $\varphi \ge \varphi_{\mathrm{arr}}$
 （config の `ARRIVE_FILL`）で車輪を止めてその場で食べる。
