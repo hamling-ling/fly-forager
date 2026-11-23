@@ -72,8 +72,8 @@ Counts は flycar_q と同じ 10 Hz で別スレッドが更新し、メイン�
 全体は、視覚回路と採餌回路が並行に流れ、2本の信号だけで結合した
 系である。判断周期はなく、すべての量は連続時間の関数。
 
-目の変換（fly-car と同一の PN 段、$i \in \{L, R\}$、$c_i$ は目の
-赤被覆率、$\mathrm{place}$ は赤の重心）：
+目の変換（fly-car と同一の PN 段、 $i \in \{L, R\}$ 、 $c_i$ は目の
+赤被覆率、 $\mathrm{place}$ は赤の重心）：
 
 $$
 u_i = \mathrm{PN}(c_i, \mathrm{place})
@@ -95,7 +95,7 @@ $$
 \sigma = \begin{cases} 1 & \widehat{\mathrm{MN9}} \ge 10\ \mathrm{Hz} \\ 0 & \text{それ以外} \end{cases}
 $$
 
-駆動の読み出し（fly-car の交差読み出し＋ゲート $\sigma$）：
+駆動の読み出し（fly-car の交差読み出し＋ゲート $\sigma$ ）：
 
 $$
 v_L = k\left(\sigma\, r_R^{\mathrm{DNa02}} - r_R^{\mathrm{DNp01}}\right), \qquad
@@ -103,7 +103,7 @@ v_R = k\left(\sigma\, r_L^{\mathrm{DNa02}} - r_L^{\mathrm{DNp01}}\right)
 $$
 
 $r^{\mathrm{DNp01}}$ は loom（LC4／LPLC2 → DNp01、fly-car と同一）
-から来て、$\sigma$ ではゲートされない。回転キャップ・車輪フィルタ・
+から来て、 $\sigma$ ではゲートされない。回転キャップ・車輪フィルタ・
 赤の安全停止は fly-car のまま。
 
 満腹度 $s \in [0, 1]$ は率で積分する：
@@ -116,15 +116,15 @@ $$
 $$
 
 ここで $T_{\mathrm{eat}}$ は満腹までの食事時間（config の
-`EATS_TO_FULL` × `EAT_STEP_S` = 12 秒）、$T_{\mathrm{hungry}}$ は
-空腹に戻る時間（`HUNGER_RETURN_S` = 30 秒）、$f_{\mathrm{full}}$ は
+`EATS_TO_FULL` × `EAT_STEP_S` = 12 秒）、 $T_{\mathrm{hungry}}$ は
+空腹に戻る時間（`HUNGER_RETURN_S` = 30 秒）、 $f_{\mathrm{full}}$ は
 口元の被覆率の閾値（`FILL_FULL` = 0.25）。数式の中で config 定数名を
 そのまま書かないのは、GitHub の数式処理が `\_` を落として
 `EATS_TO_FULL` のような名前が二重下付き添字エラーになるため。
 
-$s$ が 1 に達するとラッチし、$s$ が `FULL_RELEASE` $= 0.6$
+$s$ が 1 に達するとラッチし、 $s$ が `FULL_RELEASE` $= 0.6$
 まで下がる間は実効満腹度 $s_{\mathrm{eff}} = 1$ を保つ（それ以外は
-$s_{\mathrm{eff}} = s$）。パラメータは $s_{\mathrm{eff}}$ の区分線形
+$s_{\mathrm{eff}} = s$ ）。パラメータは $s_{\mathrm{eff}}$ の区分線形
 補間で、測定点を通る：
 
 | $s_{\mathrm{eff}}$ | 0 (hungry) | 0.5 (base) | 1 (satiated) |
@@ -132,7 +132,7 @@ $s_{\mathrm{eff}} = s$）。パラメータは $s_{\mathrm{eff}}$ の区分線�
 | $k_p$ | 1.5 | 1.0 | 0.67 |
 | $g_{\mathrm{GABA}}$ | 0.7 | 1.0 | 1.3 |
 
-到着停止（提示層）：$\mathrm{fill} \ge 0.60$（`ARRIVE_FILL`）で
+到着停止（提示層）： $\mathrm{fill} \ge 0.60$ （`ARRIVE_FILL`）で
 車輪を止めてその場で食べる。ただし逃避中（mode back）はそちらが
 優先する。
 
