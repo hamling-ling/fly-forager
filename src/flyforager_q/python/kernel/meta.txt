@@ -1,0 +1,4 @@
+n 687
+edges 37601
+mn9 680
+nsugar 20

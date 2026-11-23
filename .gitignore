@@ -230,3 +230,15 @@ flywire_annotations/
 results*/
 data/*
 !data/.gitkeep
+
+# カーネルのバイナリはボード上でビルドする
+src/flyforager_q/python/kernel/sim
+
+# カーネルの接続表（.bin）は Release（タグ kernel-v1）で配る
+src/flyforager_q/python/kernel/*.bin
+
+# loom の細胞表は fly-car の src/flycar/loom_cells.npz のコピー（二進なので連携 push では送らない）
+src/flyforager_q/python/loom_cells.npz
+
+# 実機ログの置き場
+logs/

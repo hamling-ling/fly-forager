@@ -15,9 +15,10 @@
 ## 構成
 
 - `src/flyforager/` — パッケージ。`subcircuit/` に抽出回路の索引（CSV）が入る。接続表の本体（parquet）は Release で配る
+- `src/flyforager_q/` — 実機アプリ（UNO Q）。Python メイン + C++ 判断カーネル + LED 口吻スケッチ。詳細は中の README
 - `research/` — 設計書と決定シート
 - `docs/poster/` — ポンチ絵
-- `scripts/` — 全脳データの入手手順
+- `scripts/` — 全脳データの入手手順と、実機への deploy スクリプト
 - `data/` — 全脳データの置き場（中身はリポジトリに入れない）
 
 ## 必要な環境
@@ -26,7 +27,7 @@
 
 ## データについて
 
-全脳の接続表とモデルは、FlyWire のデータ（CC BY-NC 4.0）と Shiu et al. のモデルコード（MIT）を使う。入手手順は [scripts/README.md](scripts/README.md) に書いた。自分で抽出した 687 ニューロンの部分回路は、索引の CSV をこのリポジトリに、接続表の本体（Connectivity_sub.parquet）を Release（タグ subcircuit-v1）に置いている。
+全脳の接続表とモデルは、FlyWire のデータ（CC BY-NC 4.0）と Shiu et al. のモデルコード（MIT）を使う。入手手順は [scripts/README.md](scripts/README.md) に書いた。自分で抽出した 687 ニューロンの部分回路は、索引の CSV をこのリポジトリに、接続表の本体（Connectivity_sub.parquet）を Release（タグ subcircuit-v1）に置いている。実機アプリの判断カーネルが使う接続表（.bin 形式）も Release（タグ kernel-v1）で配り、`scripts/download_kernel_data.sh` で取得する。
 
 ## 正直なところ
 

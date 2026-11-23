@@ -1,5 +1,16 @@
 # scripts
 
+## 実機へのデプロイ
+
+`deploy_flyforager_q.sh` が flyforager_q を UNO Q にデプロイする
+（fly-car の deploy と同じ流儀）。使い方は `src/flyforager_q/README.md`。
+
+## カーネルの接続表の取得
+
+`download_kernel_data.sh` が判断カーネルの接続表（.bin）を
+Release（タグ kernel-v1）から取得し、`src/flyforager_q/python/kernel/`
+に置く。デプロイの前に実行しておくこと。
+
 ## 全脳データの入手
 
 全脳モデルで実験を再現するには、次の2つを `data/` に置く（どちらもこのリポジトリには含めない）。
