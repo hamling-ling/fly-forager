@@ -1,21 +1,26 @@
 """Knobs for the foraging robot.
 
-States are the Experiment D parameter sets, measured on the full brain
-and reproduced by the extracted subcircuit. A state is only a pair
-(k_p, g_gaba): peripheral input gain and GABAergic brake tone. The
-presets are the measured points; "auto" mode interpolates between
-them (the intermediate points were measured in silico on 2026-11-22).
+A state is only a pair (k_p, g_gaba): peripheral input gain and
+GABAergic brake tone. "hungry" and "base" are the Experiment D
+parameter sets, measured on the full brain and reproduced by the
+extracted subcircuit. "satiated" sits on the same base->S3 line,
+extended past S3 (which lies at level ~0.83 on this axis) so the
+full state refuses across the camera's real input range; its
+dose-response was measured in silico on 2026-11-23 (kernel + Brian2).
+"auto" mode interpolates between the presets (the intermediate
+points were measured in silico on 2026-11-22).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-# (k_p, g_gaba) per state. H3 = hunger, S3 = satiety (Experiment D).
+# (k_p, g_gaba) per state. H3 = hunger (Experiment D); satiated is
+# the base->S3 ray extended to t=1.5 (see the module docstring).
 STATES = {
     "base": (1.0, 1.0),
     "hungry": (1.5, 0.7),
-    "satiated": (0.67, 1.3),
+    "satiated": (0.505, 1.45),
 }
 DEFAULT_STATE = "base"
 
@@ -111,9 +116,10 @@ def read_state(path: Path = STATE_FILE) -> str:
 
 def params_at(level: float) -> tuple[float, float]:
     """(k_p, g_gaba) at a satiety level, interpolated through the
-    measured sets: level 0 = hungry (H3), 0.5 = base, 1 = satiated
-    (S3). Only those three points are measured; between them is a
-    straight line, a display device like the binary states were."""
+    level 0 = hungry (H3), 0.5 = base, 1 = the extended satiety
+    point; the satiety-side line passes through the measured S3 set
+    at level ~0.83. Between the points is a straight line, a display
+    device like the binary states were."""
     level = min(1.0, max(0.0, level))
     if level <= 0.5:
         a, b, t = STATES["hungry"], STATES["base"], level * 2.0

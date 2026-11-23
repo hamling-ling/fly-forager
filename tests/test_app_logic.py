@@ -12,10 +12,10 @@ import food
 import kernel
 
 
-def test_state_presets_are_the_measured_sets():
+def test_state_presets():
     assert config.STATES["base"] == (1.0, 1.0)
-    assert config.STATES["hungry"] == (1.5, 0.7)      # H3
-    assert config.STATES["satiated"] == (0.67, 1.3)   # S3
+    assert config.STATES["hungry"] == (1.5, 0.7)        # H3, measured
+    assert config.STATES["satiated"] == (0.505, 1.45)   # S3 ray, t=1.5
     assert config.DEFAULT_STATE in config.STATES
     assert config.EAT_THRESHOLD_HZ == 10.0
 
@@ -68,6 +68,9 @@ def test_params_at_measured_points():
     # clamped outside 0..1
     assert config.params_at(-1.0) == config.STATES["hungry"]
     assert config.params_at(2.0) == config.STATES["satiated"]
+    # the measured S3 set lies on the satiety-side line at ~0.83
+    kp, gg = config.params_at(0.5 + 0.5 * (1.0 - 0.67) / (1.0 - 0.505))
+    assert abs(kp - 0.67) < 1e-9 and abs(gg - 1.30) < 1e-9
     # k_p falls and g_gaba rises monotonically toward satiety
     ks = [config.params_at(x / 10)[0] for x in range(11)]
     gs = [config.params_at(x / 10)[1] for x in range(11)]
