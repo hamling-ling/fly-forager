@@ -136,13 +136,13 @@ $$
 $$
 
 ここで $T_{\mathrm{eat}}$ は満腹までの食事時間（config の
-`EATS_TO_FULL` × `EAT_STEP_S` = 12 秒）、 $T_{\mathrm{hungry}}$ は
-空腹に戻る時間（`HUNGER_RETURN_S` = 30 秒）、 $f_{\mathrm{full}}$ は
-口元の被覆率の閾値（`FILL_FULL` = 0.25）。数式の中で config 定数名を
+`EATS_TO_FULL` × `EAT_STEP_S`）、 $T_{\mathrm{hungry}}$ は
+空腹に戻る時間（config の `HUNGER_RETURN_S`）、 $f_{\mathrm{full}}$ は
+口元の被覆率の閾値（config の `FILL_FULL`）。数式の中で config 定数名を
 そのまま書かないのは、GitHub の数式処理が `\_` を落として
 `EATS_TO_FULL` のような名前が二重下付き添字エラーになるため。
 
-$s$ が 1 に達するとラッチし、 $s$ が `FULL_RELEASE` $= 0.6$
+$s$ が 1 に達するとラッチし、 $s$ が `FULL_RELEASE`
 まで下がる間は実効満腹度 $s_{\mathrm{eff}} = 1$ を保つ（それ以外は
 $s_{\mathrm{eff}} = s$ ）。パラメータは $s_{\mathrm{eff}}$ の区分線形
 補間で、測定点を通る：
