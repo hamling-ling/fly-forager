@@ -150,9 +150,16 @@ flowchart TD
         GRN --> neurons --> MN9
     end
 
-    MN9 --> output["食べる信号"]
+    MN9 --> output["食べる信号（MN9推定）"]
     output -->|口元で食べている間、増える| s
     s -->|時間で減る| s
+    output --> sigma["σ（ゲート、sigmoid）"]
+    camera -->|赤| dna["DNa02（接近）"]
+    camera -->|青の膨張| dnp["DNp01（逃避）"]
+    dna --> readout["読み出し（v_L, v_R）"]
+    dnp --> readout
+    sigma -.->|接近項に掛かる| readout
+    readout --> wheels["車輪"]
 ```
 
 1 秒試行の MN9 スパイク数を $N_j$ として、
