@@ -110,8 +110,10 @@ Counts は flycar_q と同じ 10 Hz で別スレッドが更新し、メイン�
 全体は、視覚回路と採餌回路が並行に流れ、2本の信号だけで結合した
 系である。判断周期はなく、すべての量は連続時間の関数。
 
-目の変換（fly-car と同一の PN 段、 $i \in \{L, R\}$ 、 $c_i$ は目の
-赤被覆率、 $\mathrm{place}$ は赤の重心）：
+目の変換（fly-car と同一の PN 段。PN は投射ニューロン
+（projection neuron）で、この段は目の被覆率と重心から飽和型の
+駆動を作る。 $i \in \{L, R\}$ 、 $c_i$ は目の赤被覆率、
+$\mathrm{place}$ は赤の重心）：
 
 $$
 u_i = \mathrm{PN}(c_i, \mathrm{place})
@@ -123,9 +125,12 @@ $$
 \rho = \rho_{\max} \cdot \frac{u_L + u_R}{2}, \qquad \rho_{\max} = 150\ \mathrm{Hz}
 $$
 
+$\rho$ は採餌回路への公称入力レートで、餌の濃さに相当する。
 実効入力レートは $k_p \rho$ で、20 個の糖 GRN への Poisson 入力に
 なる。採餌回路は抽出サブサーキット（687 ニューロン、LIF）で、
-GABA 作動性出力の重みに $g_{\mathrm{GABA}}$ を掛ける。1 秒試行の
+GABA 作動性出力の重みに $g_{\mathrm{GABA}}$ を掛ける。その出力に
+ある運動ニューロン MN9 は、ハエでは口吻の筋肉を駆動する細胞で、
+その発火がこのロボットの「食べる」信号になる。1 秒試行の
 MN9 スパイク数を $N_j$ として、
 
 $$
@@ -154,31 +159,34 @@ $r^{\mathrm{DNp01}}$ は loom（LC4／LPLC2 → DNp01、fly-car と同一）
 
 $$
 \frac{ds}{dt} = \begin{cases}
-+\dfrac{1}{T_{\mathrm{eat}}} & \sigma = 1 \text{ かつ } \mathrm{fill} \ge f_{\mathrm{full}} \\
++\dfrac{1}{T_{\mathrm{eat}}} & \sigma = 1 \text{ かつ } \varphi \ge \varphi_{\mathrm{full}} \\
 -\dfrac{1}{T_{\mathrm{hungry}}} & \text{それ以外}
 \end{cases}
 $$
 
 ここで $T_{\mathrm{eat}}$ は満腹までの食事時間（config の
 `EATS_TO_FULL` × `EAT_STEP_S`）、 $T_{\mathrm{hungry}}$ は
-空腹に戻る時間（config の `HUNGER_RETURN_S`）、 $f_{\mathrm{full}}$ は
-口元の被覆率の閾値（config の `FILL_FULL`）。数式の中で config 定数名を
-そのまま書かないのは、GitHub の数式処理が `\_` を落として
-`EATS_TO_FULL` のような名前が二重下付き添字エラーになるため。
+空腹に戻る時間（config の `HUNGER_RETURN_S`）、 $\varphi$ は
+中央 ROI の赤被覆率、 $\varphi_{\mathrm{full}}$ は「口元」の
+閾値（config の `FILL_FULL`）。
 
 $s$ が 1 に達するとラッチし、 $s$ が `FULL_RELEASE`
 まで下がる間は実効満腹度 $s_{\mathrm{eff}} = 1$ を保つ（それ以外は
-$s_{\mathrm{eff}} = s$ ）。パラメータは $s_{\mathrm{eff}}$ の区分線形
-補間で、測定点を通る：
+$s_{\mathrm{eff}} = s$ ）。パラメータ対 $(k_p, g_{\mathrm{GABA}})$ は
+$s_{\mathrm{eff}}$ の関数で、測定した3点の間を直線でつないだ
+区分線形補間である。 $s_{\mathrm{eff}}$ が上がる（満腹に近づく）
+ほど $k_p$ は下がって入力の感度が下がり、 $g_{\mathrm{GABA}}$ は
+上がってブレーキが強まる。その結果、用量反応曲線が右へずれ、
+同じ濃さでも食べにくくなる。測定点は次の通り：
 
 | $s_{\mathrm{eff}}$ | 0 (hungry) | 0.5 (base) | 1 (satiated) |
 | --- | --- | --- | --- |
 | $k_p$ | 1.5 | 1.0 | 0.67 |
 | $g_{\mathrm{GABA}}$ | 0.7 | 1.0 | 1.3 |
 
-到着停止（提示層）： $\mathrm{fill} \ge 0.60$ （`ARRIVE_FILL`）で
-車輪を止めてその場で食べる。ただし逃避中（mode back）はそちらが
-優先する。
+到着停止（提示層）： $\varphi \ge \varphi_{\mathrm{arr}}$
+（config の `ARRIVE_FILL`）で車輪を止めてその場で食べる。
+ただし逃避中（mode back）はそちらが優先する。
 
 ## 状態（空腹／満腹）
 
