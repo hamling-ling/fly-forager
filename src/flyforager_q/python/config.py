@@ -84,8 +84,9 @@ FOOD_HSV = (
 # Frames to drop before the first decision. Exposure is still climbing.
 WARMUP_FRAMES = 20
 
-# The live state is read from this file next to app.yaml on every
-# decision, so a demo can flip it with:  echo hungry > state.txt
+# The live state is read from this file next to app.yaml at the
+# same timing as the log line, so a demo can flip it with:
+# echo hungry > state.txt
 # The file may also say "auto": the robot then feeds itself full (see
 # the satiety dynamics below) and gets hungry again over time.
 STATE_FILE = Path(__file__).resolve().parents[1] / "state.txt"
